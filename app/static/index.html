@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Emby Clean</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2b;--panel2:#172238;--line:#26324a;--text:#edf4ff;--muted:#91a0b8;--primary:#4db5ff;--danger:#fb5b75;--ok:#37d99e;--warn:#ffd166}
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#08101f,#111827 55%,#0b1020);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;display:flex}
+    aside{width:300px;padding:24px 20px;border-right:1px solid var(--line);background:rgba(7,11,22,.88);position:sticky;top:0;height:100vh;overflow:auto} main{flex:1;padding:28px;overflow:auto;height:100vh}
+    h1{margin:0 0 18px;font-size:26px} h2{margin:0 0 16px;font-size:20px}.brand{font-size:24px;font-weight:900;margin-bottom:24px}.brand span{color:var(--primary)}
+    .panel{background:rgba(18,26,43,.84);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+    .stat{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);color:var(--muted)}.stat strong{color:var(--text);text-align:right}
+    .nav{display:grid;gap:8px;margin-top:18px}.nav button,button{border:0;border-radius:8px;background:var(--panel2);color:var(--text);padding:11px 14px;font-weight:700;cursor:pointer}.nav button.active,.primary{background:var(--primary);color:#06111e}.danger{background:var(--danger);color:#fff}.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.ok{color:var(--ok)}.warn{color:var(--warn)}.muted{color:var(--muted)}
+    .grid{display:grid;gap:16px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.libs,.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.chip{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:8px;padding:14px;min-height:72px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;flex-direction:column}.chip.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(77,181,255,.18) inset;color:#bfe5ff}
+    label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.04em} input,select{width:100%;border:1px solid var(--line);background:#070b14;color:var(--text);border-radius:8px;padding:10px 12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.page{display:none}.page.active{display:block}
+    .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:14px 0;flex-wrap:wrap}.stickybar{position:sticky;top:-28px;z-index:5;background:rgba(11,16,32,.96);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px;backdrop-filter:blur(12px)}
+    .group{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px;background:rgba(0,0,0,.12)}.group-head{padding:12px 14px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.item{display:grid;grid-template-columns:auto 76px 1fr auto;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);align-items:center}.poster{width:76px;height:112px;border-radius:8px;object-fit:cover;background:#050811;border:1px solid var(--line)}.no-poster{display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;text-align:center}
+    .item small{color:var(--muted);display:block;word-break:break-all;margin-top:4px}.badge{border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}.badge.delete{color:#ff9bad;border-color:rgba(251,91,117,.45)}.badge.keep{color:#76e6b7;border-color:rgba(55,217,158,.45)}.badge.review{color:#ffd166;border-color:rgba(255,209,102,.5)}.badge.rank{color:#bfe5ff;border-color:rgba(77,181,255,.45)}
+    .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:#050811;border:1px solid var(--line);border-radius:8px;padding:18px;min-height:460px}.mini{font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+    @media(max-width:960px){body{display:block}aside{width:auto;height:auto;position:static}main{height:auto;padding:18px}.two{grid-template-columns:1fr}.item{grid-template-columns:auto 60px 1fr}.poster{width:60px;height:90px}.item>.row{grid-column:3}}
+  </style>
+</head>
+<body>
+  <aside>
+    <div class="brand">Emby<span>Clean</span></div>
+    <div class="panel">
+      <div class="stat"><span>服务器</span><strong id="server">-</strong></div>
+      <div class="stat"><span>版本</span><strong id="ver">-</strong></div>
+      <div class="stat"><span>用户</span><strong id="user">-</strong></div>
+      <div class="stat"><span>缓存媒体</span><strong id="cache">0</strong></div>
+      <div class="stat"><span>媒体对账</span><strong id="expected">0</strong></div>
+      <div class="stat"><span>已清理</span><strong id="cleaned">0</strong></div>
+      <div class="stat"><span>释放</span><strong id="saved">0 B</strong></div>
+      <p id="ready" class="muted">连接状态检测中</p>
+      <p id="sync_detail" class="muted mini"></p>
+      <button class="primary" onclick="syncNow()" style="width:100%">立即同步元数据</button>
+    </div>
+    <div class="nav">
+      <button class="active" onclick="nav('clean',this)">扫描配置</button>
+      <button onclick="nav('results',this)">扫描结果</button>
+      <button onclick="nav('settings',this)">系统配置</button>
+      <button onclick="nav('logs',this)">日志中心</button>
+    </div>
+    <p class="muted mini" style="margin-top:18px">v1.0 · 不建议映射公网</p>
+  </aside>
+
+  <main>
+    <section id="p-clean" class="page active">
+      <div class="panel">
+        <div class="split"><h2>1. 选择媒体库</h2><button class="ghost" onclick="toggleAllLibs()">全选/反选媒体库</button></div>
+        <div id="libs" class="libs"></div>
+      </div>
+      <div class="panel">
+        <h2>2. 扫描模式</h2>
+        <div id="modes" class="modes"></div>
+        <div class="row" style="margin-top:14px">
+          <div style="width:150px"><label>极小文件 MB</label><input id="param_s" value="100"></div>
+          <div style="width:150px"><label>时长范围</label><select id="duration_scope"><option value="dir">同目录</option><option value="library">全库</option></select></div>
+          <div style="width:150px"><label>时长精度</label><select id="duration_precision"><option value="second">整秒</option><option value="centisecond">百分秒</option></select></div>
+          <div style="width:150px"><label>每页处理</label><select id="page_size"><option>50</option><option selected>100</option><option>200</option></select></div>
+        </div>
+        <div class="toolbar">
+          <button class="primary" onclick="scan()">开始扫描</button>
+          <span class="muted mini">结果会进入独立页面；每页默认勾选建议删除项，处理完再翻下一页。</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="p-results" class="page">
+      <div class="stickybar">
+        <div class="toolbar">
+          <div><strong id="result_title">暂无扫描结果</strong><div id="result_meta" class="muted mini"></div></div>
+          <div class="row">
+            <button class="ghost" onclick="navByName('clean')">返回扫描</button>
+            <button class="ghost" onclick="prevPage()">上一页</button>
+            <button class="ghost" onclick="nextPage()">下一页</button>
+            <button class="ghost" onclick="selectRecommendedPage()">本页推荐</button>
+            <button class="ghost" onclick="toggleVisible(true)">本页全选</button>
+            <button class="ghost" onclick="toggleVisible(false)">本页全不选</button>
+            <button class="ghost" onclick="ignoreSelected()">忽略选中</button>
+            <button class="danger" onclick="deleteSelected()">队列删除选中</button>
+          </div>
+        </div>
+        <div id="mode_actions" class="row"></div>
+      </div>
+      <div id="result"></div>
+    </section>
+
+    <section id="p-settings" class="page">
+      <div class="grid two">
+        <div class="panel">
+          <h2>媒体库配置</h2>
+          <label>Emby 地址</label><input id="host" placeholder="http://ip:8096">
+          <label>用户名</label><input id="cfg_user">
+          <label>密码</label><input id="pwd" type="password">
+          <label>通知 Webhook</label><input id="webhook">
+          <label>全量更新定时</label><input id="cron_sync" placeholder="0 4 * * *">
+          <button class="primary" onclick="saveConfig()" style="margin-top:14px;width:100%">保存配置</button>
+        </div>
+        <div class="panel">
+          <h2>智能处理偏好</h2>
+          <label>番号推荐规则</label><select id="pref_av"><option value="rank">破解-C > C > 破解 > 无标签；流出人工确认</option><option value="tag_uc">选 [UC]</option><option value="tag_c">选 [C]</option><option value="tag_raw">选原版</option></select>
+          <label>同大推荐规则</label><select id="pref_size"><option value="path_long">最长路径</option><option value="path_short">最短路径</option><option value="name_long">最长名称</option><option value="name_short">最短名称</option></select>
+          <label>时长推荐规则</label><select id="pref_duration"><option value="min">选最小文件</option><option value="max">选最大文件</option></select>
+          <label>洗版推荐规则</label><select id="pref_smart"><option value="reso_max">最高分辨率</option><option value="reso_min">最低分辨率</option></select>
+          <button class="ghost" onclick="saveConfig()" style="margin-top:14px;width:100%">保存偏好</button>
+        </div>
+      </div>
+      <div class="panel"><h2>黑名单管理</h2><div id="ignored" class="muted">加载中</div></div>
+    </section>
+
+    <section id="p-logs" class="page">
+      <div class="toolbar"><h1>系统日志</h1><button class="ghost" onclick="clearLogs()">清空</button></div>
+      <div id="logs" class="log"></div>
+    </section>
+  </main>
+
+  <script>
+    const $=id=>document.getElementById(id);
+    const modes=[['av','🔞 番号查重'],['smart','🧠 智能洗版'],['size','⚖️ 同大查重'],['duration','⏳ 时长查重'],['noposter','🖼️ 缺失封面'],['tiny','🐜 极小文件']];
+    let state={mode:'av',libs:new Set(),libraries:[],data:[],flat:[],selected:new Set(),config:{},page:1,pageSize:100,active:'clean'};
+
+    function nav(name,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');state.active=name;if(name==='settings'){loadConfig();loadIgnored()}if(name==='logs')loadLogs()}
+    function navByName(name){const btn=[...document.querySelectorAll('.nav button')].find(b=>b.textContent.includes(name==='clean'?'扫描配置':name==='results'?'扫描结果':name));nav(name,btn)}
+    function bytes(n){n=Number(n||0);const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`}
+    function note(msg){$('sync_detail').textContent=msg}
+
+    async function poll(){const s=await(await fetch('/api/status')).json();$('server').textContent=s.server_name||'-';$('ver').textContent=s.server_ver||'-';$('user').textContent=s.user_name||'-';$('cache').textContent=s.media_cache??s.local_cache??0;$('expected').textContent=`${s.media_cache??0} / ${s.library_expected||0}`;$('cleaned').textContent=s.cleaned_count||0;$('saved').textContent=bytes(s.saved_space||0);$('ready').innerHTML=s.connected?'<span class="ok">已连接</span>':'未连接';$('sync_detail').textContent=s.is_deleting?`删除中：${s.delete_current||0}/${s.delete_total||0}`:(s.is_syncing?`同步中：${s.sync_lib||'-'} · 当前库 ${s.sync_current||0}/${s.sync_expected||0} · 累计 ${s.sync_total||0}`:(s.last_log||''));if(state.active==='logs')loadLogs(false)}
+    async function loadConfig(){const c=await(await fetch('/api/config')).json();state.config=c;$('host').value=c.host||'';$('cfg_user').value=c.user||'';$('webhook').value=c.webhook||'';$('cron_sync').value=c.cron_sync||'';const p=c.prefs||{};$('pref_av').value=p.av_keep_priority||'rank';$('pref_size').value=p.size_keep||'path_long';$('pref_duration').value=p.duration_keep||'min';$('pref_smart').value=p.smart_keep||'reso_max'}
+    async function saveConfig(){const payload={host:$('host').value,user:$('cfg_user').value,pwd:$('pwd').value,webhook:$('webhook').value,cron_sync:$('cron_sync').value,prefs:{av_keep_priority:$('pref_av').value,size_keep:$('pref_size').value,duration_keep:$('pref_duration').value,smart_keep:$('pref_smart').value,duration_scope:$('duration_scope').value,duration_precision:$('duration_precision').value,confirm_batch:'true'}};const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok){note(await r.text());return}$('pwd').value='';await init();note('配置已保存')}
+    async function loadLibraries(){const box=$('libs');box.innerHTML='<span class="muted">加载中</span>';try{state.libraries=await(await fetch('/api/libraries')).json();box.innerHTML=state.libraries.map(x=>`<div class="chip ${state.libs.has(x.Id)?'active':''}" data-lib="${x.Id}" onclick="toggleLib('${x.Id}',this)"><strong>${x.Name}</strong><small class="muted">${x.CollectionType||''} · 媒体 ${x.CachedCount??0}/${x.ItemCount??0}</small><small class="muted">API条目 ${x.ApiCount??x.ItemCount??0}</small></div>`).join('')||'<span class="muted">无媒体库</span>'}catch{box.innerHTML='<span class="muted">请先保存 Emby 配置</span>'}}
+    function resetSelection(){state.selected.clear();state.flat=[];state.data=[];state.page=1;renderResults()}function toggleLib(id,el){state.libs.has(id)?state.libs.delete(id):state.libs.add(id);el.classList.toggle('active');resetSelection()}
+    function toggleAllLibs(){const all=state.libraries.map(x=>x.Id);const on=state.libs.size!==all.length;state.libs=new Set(on?all:[]);state.selected.clear();state.flat=[];state.data=[];state.page=1;loadLibraries();renderResults()}
+    function renderModes(){$('modes').innerHTML=modes.map(([id,name])=>`<div class="chip ${id===state.mode?'active':''}" onclick="setMode('${id}',this)">${name}</div>`).join('')}
+    function setMode(id,el){state.mode=id;document.querySelectorAll('#modes .chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');state.selected.clear();state.flat=[];state.data=[];state.page=1;renderModeActions();renderResults()}
+    function renderModeActions(){let h='<button class="ghost" onclick="selectRecommendedPage()">本页推荐</button>';if(state.mode==='av')h+=`<button class="ghost" onclick="selectByTag('tag_c')">选 [C]</button><button class="ghost" onclick="selectByTag('tag_crack')">选破解</button><button class="ghost" onclick="selectByTag('tag_leak')">只看/选流出</button><button class="ghost" onclick="selectByTag('tag_raw')">选无标签</button>`;if(state.mode==='smart')h+=`<button class="ghost" onclick="selectResolution(true)">保留最高分辨率</button><button class="ghost" onclick="selectResolution(false)">保留最低分辨率</button>`;if(state.mode==='duration')h+=`<button class="ghost" onclick="selectBySize(false)">保留最小文件</button><button class="ghost" onclick="selectBySize(true)">保留最大文件</button>`;$('mode_actions').innerHTML=h}
+    async function syncNow(){await fetch('/api/sync',{method:'POST'});note('同步已开始，日志会自动更新');navByName('logs')}
+
+    async function scan(){state.pageSize=Number($('page_size').value||100);$('result').innerHTML='<div class="panel muted">扫描中...</div>';navByName('results');const url=`/api/scan?mode=${state.mode}&lib=${[...state.libs].join(',')}&param_s=${$('param_s').value}&duration_scope=${$('duration_scope').value}&duration_precision=${$('duration_precision').value}`;state.data=await(await fetch(url)).json();state.flat=state.data.flatMap(g=>g.items.map(i=>({...i,groupTitle:g.title,groupItems:g.items.map(x=>x.emby_id)})));state.page=1;selectRecommendedPage(false);renderResults()}
+    function visible(){const start=(state.page-1)*state.pageSize;return state.flat.slice(start,start+state.pageSize)}
+    function pageCount(){return Math.max(1,Math.ceil(state.flat.length/state.pageSize))}
+    function renderResults(){const vis=visible();$('result_title').textContent=state.flat.length?`扫描结果：${state.data.length} 组 / ${state.flat.length} 条`:'暂无扫描结果';$('result_meta').textContent=`第 ${state.page} / ${pageCount()} 页，本页 ${vis.length} 条，本页已选 ${selectedVisibleIds().length} 条`;if(!state.flat.length){$('result').innerHTML='<div class="panel muted">没有命中结果</div>';return}let last='';let html='';for(const i of vis){if(i.groupTitle!==last){if(last)html+='</div>';const ids=vis.filter(x=>x.groupTitle===i.groupTitle).map(x=>x.emby_id).join(',');html+=`<div class="group"><div class="group-head" onclick="toggleGroup('${ids}')"><strong>${i.groupTitle}</strong><span class="muted">${ids.split(',').length} 条</span></div>`;last=i.groupTitle}html+=itemHtml(i)}if(last)html+='</div>';$('result').innerHTML=html}
+    function itemHtml(i){const img=i.image_url?`<img class="poster" src="${i.image_url}" loading="lazy">`:`<div class="poster no-poster">缺失封面</div>`;const tags=[i.tag_leak?'流出':'',i.tag_crack?'破解':'',i.tag_c?'C':'',i.tag_uc?'UC':'',i.tag_u?'U':''].filter(Boolean).join(' · ')||'无标签';return `<div class="item"><input type="checkbox" ${state.selected.has(i.emby_id)?'checked':''} onchange="toggleItem('${i.emby_id}',this.checked)">${img}<div><strong>${i.name||i.emby_id}</strong> <span class="badge ${i.recommend_action}">${i.recommend_action||'命中'}</span> <span class="badge rank">${tags} · 优先级 ${i.version_rank||0}</span><small>${bytes(i.size)} · ${i.resolution||'-'}P · ${Math.round(i.duration||0)}s</small><small>${i.path||''}</small><small>${i.recommend_reason||''}</small></div><div class="row"><button class="ghost" onclick="ignoreOne('${i.emby_id}')">忽略</button><button class="danger" onclick="deleteOne('${i.emby_id}')">删除</button><button class="ghost" onclick="window.open('${state.config.host}/web/index.html#!/item?id=${i.emby_id}','_blank')">打开</button></div></div>`}
+    function toggleItem(id,on){on?state.selected.add(id):state.selected.delete(id);renderResults()}function toggleGroup(ids){const arr=ids.split(',').filter(Boolean);const all=arr.every(id=>state.selected.has(id));arr.forEach(id=>all?state.selected.delete(id):state.selected.add(id));renderResults()}function toggleVisible(on){visible().forEach(i=>on?state.selected.add(i.emby_id):state.selected.delete(i.emby_id));renderResults()}
+    function selectRecommendedPage(render=true){state.selected.clear();visible().forEach(i=>i.recommend_action==='delete'?state.selected.add(i.emby_id):state.selected.delete(i.emby_id));if(render)renderResults()}function prevPage(){if(state.page>1){state.page--;selectRecommendedPage(false);renderResults()}}function nextPage(){if(state.page<pageCount()){state.page++;selectRecommendedPage(false);renderResults()}}
+    function selectByTag(tag){state.selected.clear();visible().filter(i=>tag==='tag_raw'?!i.tag_c&&!i.tag_uc&&!i.tag_u&&!i.tag_crack&&!i.tag_leak:i[tag]).forEach(i=>state.selected.add(i.emby_id));renderResults()}function selectResolution(highest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(highest?i.resolution>b.resolution:i.resolution<b.resolution)?i:b,null))}function selectBySize(largest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(largest?i.size>b.size:i.size<b.size)?i:b,null))}function selectKeepPerGroup(picker){state.selected.clear();const groups={};visible().forEach(i=>(groups[i.groupTitle]??=[]).push(i));Object.values(groups).forEach(items=>{const keep=picker(items);items.forEach(i=>{if(!keep||i.emby_id!==keep.emby_id)state.selected.add(i.emby_id)})});renderResults()}
+    async function ignoreOne(id){state.selected=new Set([id]);await ignoreSelected()}async function deleteOne(id){state.selected=new Set([id]);await deleteSelected()}async function ignoreSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}await postIds('/api/ignore',{ids,mode:state.mode})}function selectedVisibleIds(){const visibleIds=new Set(visible().map(i=>i.emby_id));return [...state.selected].filter(id=>visibleIds.has(id))}async function deleteSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}if(!confirm(`确认将当前页选中的 ${ids.length} 条加入删除队列？`))return;await postIds('/api/delete',{ids})}
+    async function postIds(url,payload){const ids=new Set(payload.ids||[]);if(!ids.size){note('当前页未选择条目');return}const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));note(d.message||'操作已提交');state.flat=state.flat.filter(i=>!ids.has(i.emby_id));ids.forEach(id=>state.selected.delete(id));renderResults();loadLogs()}
+    async function loadIgnored(){const rows=await(await fetch('/api/ignore')).json();$('ignored').innerHTML=rows.map(r=>`<div class="stat"><span>${r.mode} · ${r.name||r.group_key||r.emby_id}</span><button class="ghost" onclick="fetch('/api/ignore/${r.id}',{method:'DELETE'}).then(loadIgnored)">恢复</button></div>`).join('')||'无黑名单'}async function loadLogs(){const box=$('logs');box.textContent=(await(await fetch('/api/logs')).json()).join('\n');box.scrollTop=0}async function clearLogs(){await fetch('/api/logs/clear',{method:'POST'});loadLogs()}
+    async function init(){renderModes();renderModeActions();await loadConfig();await loadLibraries();await poll()}setInterval(poll,3000);init();
+  </script>
+</body>
+</html>

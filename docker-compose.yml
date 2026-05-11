@@ -1,0 +1,11 @@
+services:
+  emby-clean:
+    build: .
+    container_name: emby-clean
+    ports:
+      - "19898:19898"
+    environment:
+      - EMBY_CLEAN_DATA=/data
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
