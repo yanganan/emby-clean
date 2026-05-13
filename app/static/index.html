@@ -6,22 +6,53 @@
   <title>Emby Clean</title>
   <style>
     :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2b;--panel2:#172238;--line:#26324a;--text:#edf4ff;--muted:#91a0b8;--primary:#4db5ff;--danger:#fb5b75;--ok:#37d99e;--warn:#ffd166}
-    *{box-sizing:border-box} body{margin:0;background:linear-gradient(135deg,#08101f,#111827 55%,#0b1020);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;display:flex}
+    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:linear-gradient(135deg,#08101f,#111827 55%,#0b1020);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;display:flex;-webkit-text-size-adjust:100%}
     aside{width:300px;padding:24px 20px;border-right:1px solid var(--line);background:rgba(7,11,22,.88);position:sticky;top:0;height:100vh;overflow:auto} main{flex:1;padding:28px;overflow:auto;height:100vh}
     h1{margin:0 0 18px;font-size:26px} h2{margin:0 0 16px;font-size:20px}.brand{font-size:24px;font-weight:900;margin-bottom:24px}.brand span{color:var(--primary)}
     .panel{background:rgba(18,26,43,.84);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
     .stat{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);color:var(--muted)}.stat strong{color:var(--text);text-align:right}
-    .nav{display:grid;gap:8px;margin-top:18px}.nav button,button{border:0;border-radius:8px;background:var(--panel2);color:var(--text);padding:11px 14px;font-weight:700;cursor:pointer}.nav button.active,.primary{background:var(--primary);color:#06111e}.danger{background:var(--danger);color:#fff}.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.ok{color:var(--ok)}.warn{color:var(--warn)}.muted{color:var(--muted)}
+    .nav{display:grid;gap:8px;margin-top:18px}.nav button,button{border:0;border-radius:8px;background:var(--panel2);color:var(--text);padding:11px 14px;font-weight:700;cursor:pointer;min-height:42px;touch-action:manipulation}.nav button.active,.primary{background:var(--primary);color:#06111e}.danger{background:var(--danger);color:#fff}.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.ok{color:var(--ok)}.warn{color:var(--warn)}.muted{color:var(--muted)}
     .grid{display:grid;gap:16px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.libs,.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.chip{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:8px;padding:14px;min-height:72px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;flex-direction:column}.chip.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(77,181,255,.18) inset;color:#bfe5ff}
     label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.04em} input,select{width:100%;border:1px solid var(--line);background:#070b14;color:var(--text);border-radius:8px;padding:10px 12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.page{display:none}.page.active{display:block}
     .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:14px 0;flex-wrap:wrap}.stickybar{position:sticky;top:-28px;z-index:5;background:rgba(11,16,32,.96);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px;backdrop-filter:blur(12px)}
     .group{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px;background:rgba(0,0,0,.12)}.group-head{padding:12px 14px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.item{display:grid;grid-template-columns:auto 76px 1fr auto;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);align-items:center}.poster{width:76px;height:112px;border-radius:8px;object-fit:cover;background:#050811;border:1px solid var(--line)}.no-poster{display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;text-align:center}
     .item small{color:var(--muted);display:block;word-break:break-all;margin-top:4px}.badge{border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}.badge.delete{color:#ff9bad;border-color:rgba(251,91,117,.45)}.badge.keep{color:#76e6b7;border-color:rgba(55,217,158,.45)}.badge.review{color:#ffd166;border-color:rgba(255,209,102,.5)}.badge.rank{color:#bfe5ff;border-color:rgba(77,181,255,.45)}
-    .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:#050811;border:1px solid var(--line);border-radius:8px;padding:18px;min-height:460px}.mini{font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
-    @media(max-width:960px){body{display:block}aside{width:auto;height:auto;position:static}main{height:auto;padding:18px}.two{grid-template-columns:1fr}.item{grid-template-columns:auto 60px 1fr}.poster{width:60px;height:90px}.item>.row{grid-column:3}}
+    .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:#050811;border:1px solid var(--line);border-radius:8px;padding:18px;min-height:460px;overflow:auto}.mini{font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+    @media(max-width:960px){
+      body{display:block}
+      aside{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:14px;background:rgba(7,11,22,.96)}
+      main{height:auto;padding:16px 14px 96px;overflow:visible}
+      h1{font-size:22px}h2{font-size:18px}.brand{font-size:22px;margin-bottom:12px}
+      .panel{padding:16px;margin-bottom:14px}.two{grid-template-columns:1fr}
+      aside .panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;margin-bottom:12px}
+      aside .panel .stat{min-width:0}.stat strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #ready,#sync_detail,aside .panel button{grid-column:1/-1}
+      body:not([data-page="clean"]) aside .panel,body:not([data-page="clean"]) aside>p{display:none}
+      body:not([data-page="clean"]) aside{position:sticky;top:0;z-index:9}
+      body:not([data-page="clean"]) .brand{margin-bottom:6px}
+      .nav{grid-template-columns:repeat(4,minmax(86px,1fr));gap:8px;margin-top:10px;position:sticky;top:0;z-index:8;background:rgba(7,11,22,.96);padding:8px 0}
+      .nav button{padding:10px 8px;font-size:13px}
+      .libs,.modes{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chip{min-height:66px;padding:12px 10px}
+      .split{grid-template-columns:1fr}.split button{width:100%}
+      .row>div[style*="width"]{width:calc(50% - 5px)!important}
+      .toolbar{align-items:stretch}.toolbar>div:first-child{width:100%}.toolbar button{flex:1 1 auto}
+      .stickybar{top:0;margin:0 -14px 14px;border-left:0;border-right:0;border-radius:0;padding:10px 14px}
+      .stickybar .toolbar{margin:0 0 10px}.stickybar .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.stickybar .row button{width:100%;padding:10px 8px;font-size:12px}
+      #mode_actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px}#mode_actions button{width:100%;font-size:12px}
+      .item{grid-template-columns:auto 60px minmax(0,1fr);gap:10px;padding:12px}.poster{width:60px;height:90px}.item>.row{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.item>.row button{width:100%;padding:10px 8px;font-size:12px}.item strong{display:block;margin-bottom:6px}.badge{display:inline-flex;margin:2px 2px 2px 0;max-width:100%;white-space:normal}
+      .group-head{align-items:flex-start}.group-head strong{word-break:break-all}.log{min-height:55vh;max-height:70vh;padding:14px;font-size:12px}
+    }
+    @media(max-width:520px){
+      aside{padding:12px}.brand{margin-bottom:10px}main{padding:12px 10px 92px}
+      aside .panel{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,minmax(0,1fr));position:static}
+      .libs,.modes{grid-template-columns:1fr}.row>div[style*="width"]{width:100%!important}
+      .stickybar{margin-left:-10px;margin-right:-10px;padding:10px}.stickybar .row{grid-template-columns:repeat(2,minmax(0,1fr))}.stickybar .row .danger{grid-column:1/-1}
+      .item{grid-template-columns:28px 68px minmax(0,1fr);padding:10px}.poster{width:68px;height:98px}.item>.row{grid-template-columns:repeat(3,minmax(0,1fr))}
+      input[type="checkbox"]{width:20px;height:20px}.panel{padding:14px}.log{font-size:11px}
+    }
   </style>
 </head>
-<body>
+<body data-page="clean">
   <aside>
     <div class="brand">Emby<span>Clean</span></div>
     <div class="panel">
@@ -121,7 +152,7 @@
     const modes=[['av','🔞 番号查重'],['smart','🧠 智能洗版'],['size','⚖️ 同大查重'],['duration','⏳ 时长查重'],['noposter','🖼️ 缺失封面'],['tiny','🐜 极小文件']];
     let state={mode:'av',libs:new Set(),libraries:[],data:[],flat:[],selected:new Set(),config:{},page:1,pageSize:100,active:'clean'};
 
-    function nav(name,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');state.active=name;if(name==='settings'){loadConfig();loadIgnored()}if(name==='logs')loadLogs()}
+    function nav(name,btn){document.body.dataset.page=name;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');state.active=name;if(name==='settings'){loadConfig();loadIgnored()}if(name==='logs')loadLogs()}
     function navByName(name){const btn=[...document.querySelectorAll('.nav button')].find(b=>b.textContent.includes(name==='clean'?'扫描配置':name==='results'?'扫描结果':name));nav(name,btn)}
     function bytes(n){n=Number(n||0);const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`}
     function note(msg){$('sync_detail').textContent=msg}
