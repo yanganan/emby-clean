@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -27,6 +29,8 @@ DELETE_TASK: asyncio.Task | None = None
 DELETE_CONFIRM_TIMEOUT = 90
 DELETE_CONFIRM_INTERVAL = 3
 DELETE_SETTLE_SECONDS = 5
+SYNC_JOB_ID = "sync_media_libraries"
+scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 
 
 class ConfigRequest(BaseModel):
@@ -65,6 +69,10 @@ async def startup() -> None:
     init_db()
     with connect() as db:
         db.execute("update delete_queue set status='pending', error=NULL where status='running'")
+        cron_sync = get_config(db).get("cron_sync", "")
+    if not scheduler.running:
+        scheduler.start()
+    configure_sync_schedule(cron_sync)
     log("SYSTEM", "服务就绪...")
 
 
@@ -86,6 +94,35 @@ def client_from_db() -> EmbyClient:
     with connect() as db:
         cfg = get_config(db, include_secret=True)
     return EmbyClient(cfg.get("host", ""), cfg.get("access_token", ""), cfg.get("user_id", ""))
+
+
+def configure_sync_schedule(cron_expr: str | None) -> None:
+    if scheduler.get_job(SYNC_JOB_ID):
+        scheduler.remove_job(SYNC_JOB_ID)
+    expr = (cron_expr or "").strip()
+    if not expr:
+        return
+    try:
+        trigger = CronTrigger.from_crontab(expr, timezone="Asia/Shanghai")
+        scheduler.add_job(
+            scheduled_sync_metadata,
+            trigger,
+            id=SYNC_JOB_ID,
+            replace_existing=True,
+            coalesce=True,
+            max_instances=1,
+        )
+        log("CONFIG", f"已启用媒体库自动同步：{expr}")
+    except ValueError as exc:
+        log("ERROR", f"自动同步定时表达式无效：{expr}，{exc}")
+
+
+async def scheduled_sync_metadata() -> None:
+    if SYNC_LOCK.locked():
+        log("SYNC", "自动同步跳过：已有同步任务运行中")
+        return
+    log("SYNC", "自动同步触发")
+    await sync_metadata()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -171,6 +208,7 @@ async def cfg_post(req: ConfigRequest) -> dict[str, Any]:
         set_config_value(db, "cron_sync", req.cron_sync or "")
         if req.prefs is not None:
             set_config_value(db, "prefs", req.prefs)
+    configure_sync_schedule(req.cron_sync or "")
     log("CONFIG", "配置已保存")
     return {"status": "ok"}
 
@@ -341,6 +379,23 @@ async def scan_api(
             },
             prefs,
         )
+        deleting_ids = {
+            row["emby_id"]
+            for row in db.execute(
+                "select emby_id from delete_queue where status in ('pending','running','done')"
+            ).fetchall()
+        }
+        if deleting_ids:
+            filtered = []
+            removed = 0
+            for group in data:
+                items = [item for item in group["items"] if item.get("emby_id") not in deleting_ids]
+                removed += len(group["items"]) - len(items)
+                if len(items) > 1 or (mode in {"noposter", "tiny"} and items):
+                    filtered.append({**group, "items": items})
+            data = filtered
+            if removed:
+                log("SCAN", f"已排除删除队列中的条目 {removed} 条")
     log("SCAN", f"{mode} 命中 {sum(len(g['items']) for g in data)} 条 / {len(data)} 组")
     return data
 

@@ -15,6 +15,7 @@
     .grid{display:grid;gap:16px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.libs,.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.chip{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:8px;padding:14px;min-height:72px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;flex-direction:column}.chip.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(77,181,255,.18) inset;color:#bfe5ff}
     label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.04em} input,select{width:100%;border:1px solid var(--line);background:#070b14;color:var(--text);border-radius:8px;padding:10px 12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.page{display:none}.page.active{display:block}
     .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:14px 0;flex-wrap:wrap}.stickybar{position:sticky;top:-28px;z-index:5;background:rgba(11,16,32,.96);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px;backdrop-filter:blur(12px)}
+    .more-actions{width:100%;margin-top:8px}.more-actions summary{display:none;color:var(--muted);font-weight:800;cursor:pointer;padding:10px 0}.more-panel{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.more-actions:not([open]) .more-panel{display:flex}
     .group{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px;background:rgba(0,0,0,.12)}.group-head{padding:12px 14px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.item{display:grid;grid-template-columns:auto 76px 1fr auto;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);align-items:center}.poster{width:76px;height:112px;border-radius:8px;object-fit:cover;background:#050811;border:1px solid var(--line)}.no-poster{display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;text-align:center}
     .item small{color:var(--muted);display:block;word-break:break-all;margin-top:4px}.badge{border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}.badge.delete{color:#ff9bad;border-color:rgba(251,91,117,.45)}.badge.keep{color:#76e6b7;border-color:rgba(55,217,158,.45)}.badge.review{color:#ffd166;border-color:rgba(255,209,102,.5)}.badge.rank{color:#bfe5ff;border-color:rgba(77,181,255,.45)}
     .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:#050811;border:1px solid var(--line);border-radius:8px;padding:18px;min-height:460px;overflow:auto}.mini{font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
@@ -37,8 +38,9 @@
       .row>div[style*="width"]{width:calc(50% - 5px)!important}
       .toolbar{align-items:stretch}.toolbar>div:first-child{width:100%}.toolbar button{flex:1 1 auto}
       .stickybar{top:0;margin:0 -14px 14px;border-left:0;border-right:0;border-radius:0;padding:10px 14px}
-      .stickybar .toolbar{margin:0 0 10px}.stickybar .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.stickybar .row button{width:100%;padding:10px 8px;font-size:12px}
-      #mode_actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px}#mode_actions button{width:100%;font-size:12px}
+      .stickybar .toolbar{margin:0}.stickybar .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.stickybar .row button{width:100%;padding:10px 8px;font-size:12px}
+      .more-actions summary{display:block}.more-actions:not([open]) .more-panel{display:none}.more-actions[open] .more-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.more-actions .row{display:contents}.more-actions button{width:100%;font-size:12px}
+      #mode_actions{display:contents}
       .item{grid-template-columns:auto 60px minmax(0,1fr);gap:10px;padding:12px}.poster{width:60px;height:90px}.item>.row{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.item>.row button{width:100%;padding:10px 8px;font-size:12px}.item strong{display:block;margin-bottom:6px}.badge{display:inline-flex;margin:2px 2px 2px 0;max-width:100%;white-space:normal}
       .group-head{align-items:flex-start}.group-head strong{word-break:break-all}.log{min-height:55vh;max-height:70vh;padding:14px;font-size:12px}
     }
@@ -46,7 +48,7 @@
       aside{padding:12px}.brand{margin-bottom:10px}main{padding:12px 10px 92px}
       aside .panel{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,minmax(0,1fr));position:static}
       .libs,.modes{grid-template-columns:1fr}.row>div[style*="width"]{width:100%!important}
-      .stickybar{margin-left:-10px;margin-right:-10px;padding:10px}.stickybar .row{grid-template-columns:repeat(2,minmax(0,1fr))}.stickybar .row .danger{grid-column:1/-1}
+      .stickybar{margin-left:-10px;margin-right:-10px;padding:10px}.stickybar .row{grid-template-columns:repeat(3,minmax(0,1fr))}.stickybar .row .danger{grid-column:1/-1}
       .item{grid-template-columns:28px 68px minmax(0,1fr);padding:10px}.poster{width:68px;height:98px}.item>.row{grid-template-columns:repeat(3,minmax(0,1fr))}
       input[type="checkbox"]{width:20px;height:20px}.panel{padding:14px}.log{font-size:11px}
     }
@@ -106,14 +108,19 @@
             <button class="ghost" onclick="navByName('clean')">返回扫描</button>
             <button class="ghost" onclick="prevPage()">上一页</button>
             <button class="ghost" onclick="nextPage()">下一页</button>
+            <button class="danger" onclick="deleteSelected()">队列删除选中</button>
+          </div>
+        </div>
+        <details class="more-actions">
+          <summary>更多选择操作</summary>
+          <div class="more-panel">
             <button class="ghost" onclick="selectRecommendedPage()">本页推荐</button>
             <button class="ghost" onclick="toggleVisible(true)">本页全选</button>
             <button class="ghost" onclick="toggleVisible(false)">本页全不选</button>
             <button class="ghost" onclick="ignoreSelected()">忽略选中</button>
-            <button class="danger" onclick="deleteSelected()">队列删除选中</button>
+            <div id="mode_actions" class="row"></div>
           </div>
-        </div>
-        <div id="mode_actions" class="row"></div>
+        </details>
       </div>
       <div id="result"></div>
     </section>
@@ -126,7 +133,8 @@
           <label>用户名</label><input id="cfg_user">
           <label>密码</label><input id="pwd" type="password">
           <label>通知 Webhook</label><input id="webhook">
-          <label>全量更新定时</label><input id="cron_sync" placeholder="0 4 * * *">
+          <label>自动更新媒体库</label><input id="cron_sync" placeholder="0 4 * * *">
+          <p class="muted mini">留空为关闭；示例：<code>0 4 * * *</code> 表示每天 04:00 自动同步媒体库信息。</p>
           <button class="primary" onclick="saveConfig()" style="margin-top:14px;width:100%">保存配置</button>
         </div>
         <div class="panel">
@@ -177,7 +185,7 @@
     function selectRecommendedPage(render=true){state.selected.clear();visible().forEach(i=>i.recommend_action==='delete'?state.selected.add(i.emby_id):state.selected.delete(i.emby_id));if(render)renderResults()}function prevPage(){if(state.page>1){state.page--;selectRecommendedPage(false);renderResults()}}function nextPage(){if(state.page<pageCount()){state.page++;selectRecommendedPage(false);renderResults()}}
     function selectByTag(tag){state.selected.clear();visible().filter(i=>tag==='tag_raw'?!i.tag_c&&!i.tag_uc&&!i.tag_u&&!i.tag_crack&&!i.tag_leak:i[tag]).forEach(i=>state.selected.add(i.emby_id));renderResults()}function selectResolution(highest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(highest?i.resolution>b.resolution:i.resolution<b.resolution)?i:b,null))}function selectBySize(largest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(largest?i.size>b.size:i.size<b.size)?i:b,null))}function selectKeepPerGroup(picker){state.selected.clear();const groups={};visible().forEach(i=>(groups[i.groupTitle]??=[]).push(i));Object.values(groups).forEach(items=>{const keep=picker(items);items.forEach(i=>{if(!keep||i.emby_id!==keep.emby_id)state.selected.add(i.emby_id)})});renderResults()}
     async function ignoreOne(id){state.selected=new Set([id]);await ignoreSelected()}async function deleteOne(id){state.selected=new Set([id]);await deleteSelected()}async function ignoreSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}await postIds('/api/ignore',{ids,mode:state.mode})}function selectedVisibleIds(){const visibleIds=new Set(visible().map(i=>i.emby_id));return [...state.selected].filter(id=>visibleIds.has(id))}async function deleteSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}if(!confirm(`确认将当前页选中的 ${ids.length} 条加入删除队列？`))return;await postIds('/api/delete',{ids})}
-    async function postIds(url,payload){const ids=new Set(payload.ids||[]);if(!ids.size){note('当前页未选择条目');return}const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));note(d.message||'操作已提交');state.flat=state.flat.filter(i=>!ids.has(i.emby_id));ids.forEach(id=>state.selected.delete(id));renderResults();loadLogs()}
+    async function postIds(url,payload){const ids=new Set(payload.ids||[]);if(!ids.size){note('当前页未选择条目');return}const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok){note(d.detail||d.message||'操作失败');return}note(d.message||'操作已提交');state.flat=state.flat.filter(i=>!ids.has(i.emby_id));state.data=state.data.map(g=>({...g,items:g.items.filter(i=>!ids.has(i.emby_id))})).filter(g=>g.items.length);ids.forEach(id=>state.selected.delete(id));state.page=Math.min(state.page,pageCount());if(url==='/api/delete')selectRecommendedPage(false);renderResults();loadLogs()}
     async function loadIgnored(){const rows=await(await fetch('/api/ignore')).json();$('ignored').innerHTML=rows.map(r=>`<div class="stat"><span>${r.mode} · ${r.name||r.group_key||r.emby_id}</span><button class="ghost" onclick="fetch('/api/ignore/${r.id}',{method:'DELETE'}).then(loadIgnored)">恢复</button></div>`).join('')||'无黑名单'}async function loadLogs(){const box=$('logs');box.textContent=(await(await fetch('/api/logs')).json()).join('\n');box.scrollTop=0}async function clearLogs(){await fetch('/api/logs/clear',{method:'POST'});loadLogs()}
     async function init(){renderModes();renderModeActions();await loadConfig();await loadLibraries();await poll()}setInterval(poll,3000);init();
   </script>
