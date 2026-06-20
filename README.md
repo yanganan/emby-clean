@@ -6,23 +6,35 @@ Emby Clean is a small Docker service for auditing and cleaning duplicate or low-
 
 ## Features
 
+### Core
 - Emby metadata sync with per-library progress and persistent logs.
 - Library-level cache reconciliation: media cache, Emby media count, and API item count.
-- Duplicate scans:
-  - AV code duplicates
-  - Smart edition matching for names that differ only by tags such as `-C`, `-UC`, `4K`
-  - Same-size duplicates
-  - Same-duration duplicates
-  - Missing poster
-  - Tiny files
 - Poster preview through a local image proxy.
-- Review-aware AV priority:
-  - `破解-C > C > 破解 > 无标签`
-  - `流出 / 泄露 / leak` is marked for manual review and is not auto-selected.
-- Safe delete queue:
-  - New delete requests append to the queue while the worker is running.
-  - Deletes are processed sequentially.
-  - The worker waits until Emby no longer returns the item before moving on.
+- Review-aware AV priority: `破解-C > C > 破解 > 无标签`; `流出/泄露/leak` → manual review.
+- Safe sequential delete queue: waits until Emby confirms item is gone before proceeding.
+
+### v2.0 新增
+- **🔑 Token 自动续期**：access_token 过期后自动使用存储的密码重新认证，彻底解决重启后/过期后配置"丢失"问题。
+- **📢 Webhook 实际通知**：同步完成、删除完成、定时任务执行时自动推送通知。
+- **⏰ 定时任务**：支持创建定时扫描任务，可开启「自动删除」模式自动清理推荐项。
+- **🔄 删除后自动刷新**：批量删除完成后自动触发 Emby 库扫描 (`/Library/Refresh`)。
+- **🔁 删除队列自动重试**：失败项自动重试（可配置最大次数），也可手动一键重试。
+- **📊 存储仪表盘**：按媒体库统计占用空间、无封面数、无时长数。
+- **🔍 新增扫描模式**：
+  - `无元数据` — 检测缺少 TMDB/IMDB 等 Provider ID 的媒体
+  - `无字幕` — 检测无字幕轨道的媒体
+  - `空库检测` — 检测零媒体的空库
+
+### Scan modes
+- AV code duplicates
+- Smart edition matching for names that differ only by tags such as `-C`, `-UC`, `4K`
+- Same-size duplicates
+- Same-duration duplicates
+- Missing poster
+- Tiny files
+- Missing metadata (no Provider IDs)
+- Missing subtitles (no subtitle stream)
+- Empty library detection
 
 ## Quick Start
 

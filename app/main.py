@@ -16,10 +16,20 @@ from pydantic import BaseModel
 
 from .emby import EmbyClient, EmbyError
 from .scanner import item_from_emby, prune_missing, scan as run_scan, upsert_items
-from .store import get_config, get_config_value, get_stat, init_db, now_ts, set_config_value, set_stat, connect
+from .store import (
+    get_config,
+    get_config_value,
+    get_stat,
+    init_db,
+    now_ts,
+    set_config_value,
+    set_stat,
+    connect,
+    DEFAULT_PREFS,
+)
 
 
-app = FastAPI(title="Emby Clean", version="1.0.0")
+app = FastAPI(title="Emby Clean", version="2.0.0")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 LOGS: list[str] = []
@@ -30,8 +40,13 @@ DELETE_CONFIRM_TIMEOUT = 90
 DELETE_CONFIRM_INTERVAL = 3
 DELETE_SETTLE_SECONDS = 5
 SYNC_JOB_ID = "sync_media_libraries"
+TASK_SCHED_PREFIX = "task_"
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 
+
+# ---------------------------------------------------------------------------
+#  Pydantic models
+# ---------------------------------------------------------------------------
 
 class ConfigRequest(BaseModel):
     host: str | None = ""
@@ -61,8 +76,13 @@ class TaskReq(BaseModel):
     mode: str
     cron: str
     libraries: str
-    enabled: bool
+    enabled: bool = True
+    auto_delete: bool = False
 
+
+# ---------------------------------------------------------------------------
+#  Startup / shutdown
+# ---------------------------------------------------------------------------
 
 @app.on_event("startup")
 async def startup() -> None:
@@ -73,8 +93,52 @@ async def startup() -> None:
     if not scheduler.running:
         scheduler.start()
     configure_sync_schedule(cron_sync)
-    log("SYSTEM", "服务就绪...")
+    reload_task_schedules()
+    log("SYSTEM", "服务就绪 (v2.0)...")
+    # Proactively re-authenticate on startup if credentials are available
+    asyncio.create_task(startup_reauth())
 
+
+async def startup_reauth() -> None:
+    """On startup, verify token validity and re-authenticate if expired."""
+    await asyncio.sleep(2)
+    try:
+        client = client_from_db()
+        if not client.host:
+            return
+        with connect() as db:
+            stored_user = get_config_value(db, "user", "")
+            stored_pwd = get_config_value(db, "pwd", "")
+        if stored_user and stored_pwd:
+            try:
+                info = await client.system_info()
+                log("SYSTEM", f"连接正常：{info.get('ServerName','')} v{info.get('Version','')}")
+                return
+            except EmbyError as exc:
+                if "401" in str(exc) or "认证" in str(exc):
+                    log("SYSTEM", "Token 已过期，尝试自动重新认证...")
+                    session = await EmbyClient(
+                        client.host,
+                        username=stored_user,
+                        password=stored_pwd,
+                    ).authenticate()
+                    with connect() as db:
+                        set_config_value(db, "access_token", session.access_token)
+                        set_config_value(db, "user_id", session.user_id)
+                        set_stat(db, "server_id", session.server_id)
+                        set_stat(db, "server_name", session.server_name)
+                        set_stat(db, "server_ver", session.server_version)
+                        set_stat(db, "user_name", session.user_name)
+                    log("SYSTEM", f"自动重新认证成功：{session.server_name}")
+                else:
+                    log("ERROR", f"启动连接检查失败：{exc}")
+    except Exception as exc:
+        log("ERROR", f"启动认证检查异常：{exc}")
+
+
+# ---------------------------------------------------------------------------
+#  Logging
+# ---------------------------------------------------------------------------
 
 def log(kind: str, msg: str) -> None:
     line = time.strftime(f"[%H:%M:%S] [{kind}] ") + msg
@@ -90,11 +154,54 @@ def log(kind: str, msg: str) -> None:
         pass
 
 
+# ---------------------------------------------------------------------------
+#  Webhook notifications
+# ---------------------------------------------------------------------------
+
+async def notify(title: str, text: str) -> None:
+    """Send a webhook notification if configured."""
+    with connect() as db:
+        webhook = get_config_value(db, "webhook", "")
+    if not webhook:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(webhook, json={"title": f"Emby Clean · {title}", "text": text})
+    except Exception as exc:
+        log("ERROR", f"Webhook 推送失败：{exc}")
+
+
+# ---------------------------------------------------------------------------
+#  Emby client factory
+# ---------------------------------------------------------------------------
+
 def client_from_db() -> EmbyClient:
     with connect() as db:
         cfg = get_config(db, include_secret=True)
-    return EmbyClient(cfg.get("host", ""), cfg.get("access_token", ""), cfg.get("user_id", ""))
+    return EmbyClient(
+        cfg.get("host", ""),
+        cfg.get("access_token", ""),
+        cfg.get("user_id", ""),
+        username=cfg.get("user", ""),
+        password=cfg.get("pwd", ""),
+        auto_reauth=True,
+    )
 
+
+def save_session_to_db(session) -> None:
+    """Persist re-authenticated session credentials to DB."""
+    with connect() as db:
+        set_config_value(db, "access_token", session.access_token)
+        set_config_value(db, "user_id", session.user_id)
+        set_stat(db, "server_id", session.server_id)
+        set_stat(db, "server_name", session.server_name)
+        set_stat(db, "server_ver", session.server_version)
+        set_stat(db, "user_name", session.user_name)
+
+
+# ---------------------------------------------------------------------------
+#  Sync scheduling
+# ---------------------------------------------------------------------------
 
 def configure_sync_schedule(cron_expr: str | None) -> None:
     if scheduler.get_job(SYNC_JOB_ID):
@@ -125,6 +232,144 @@ async def scheduled_sync_metadata() -> None:
     await sync_metadata()
 
 
+# ---------------------------------------------------------------------------
+#  Task scheduling (the real deal)
+# ---------------------------------------------------------------------------
+
+def reload_task_schedules() -> None:
+    """Register all enabled tasks into the APScheduler."""
+    # Remove old task jobs
+    with connect() as db:
+        jobs = scheduler.get_jobs()
+        for job in jobs:
+            if job.id.startswith(TASK_SCHED_PREFIX):
+                scheduler.remove_job(job.id)
+        # Re-register enabled tasks
+        rows = db.execute("select * from tasks where enabled=1").fetchall()
+    for row in rows:
+        task_id = row["id"]
+        cron = row["cron"]
+        if not cron.strip():
+            continue
+        try:
+            trigger = CronTrigger.from_crontab(cron, timezone="Asia/Shanghai")
+            scheduler.add_job(
+                scheduled_task_run,
+                trigger,
+                id=f"{TASK_SCHED_PREFIX}{task_id}",
+                args=[task_id],
+                replace_existing=True,
+                coalesce=True,
+                max_instances=1,
+            )
+            log("TASK", f"定时任务 [{row['name']}] 已注册：{cron}")
+        except ValueError as exc:
+            log("ERROR", f"任务 [{row['name']}] cron 无效：{cron}，{exc}")
+
+
+async def scheduled_task_run(task_id: int) -> None:
+    """Execute a scheduled task: sync + scan, optionally auto-delete."""
+    with connect() as db:
+        task = db.execute("select * from tasks where id=?", (task_id,)).fetchone()
+    if not task or not task["enabled"]:
+        return
+    task_name = task["name"]
+    mode = task["mode"]
+    libs = [x for x in task["libraries"].split(",") if x]
+    auto_delete = bool(task["auto_delete"])
+    started = time.time()
+    log("TASK", f"[{task_name}] 定时触发：模式={mode}，自动删除={auto_delete}")
+
+    try:
+        # 1. Sync metadata for specified libraries
+        if libs:
+            await sync_metadata(libs)
+        else:
+            await sync_metadata()
+
+        # 2. Scan
+        with connect() as db:
+            prefs = get_config(db).get("prefs", {})
+            data = run_scan(db, mode, libs, {"param_s": "100", "param_d": "0"}, prefs)
+
+        found = sum(len(g["items"]) for g in data)
+        deleted_count = 0
+
+        # 3. Auto-delete if enabled (only items marked "delete")
+        if auto_delete and found:
+            delete_ids = []
+            for group in data:
+                for item in group["items"]:
+                    if item.get("recommend_action") == "delete":
+                        delete_ids.append(item["emby_id"])
+            if delete_ids:
+                queued = queue_deletes(delete_ids)
+                deleted_count = queued
+                log("TASK", f"[{task_name}] 自动入队删除 {queued} 条")
+
+        duration = int((time.time() - started) * 1000)
+        message = f"命中 {found} 条" + (f"，已入队删除 {deleted_count} 条" if auto_delete else "")
+        with connect() as db:
+            db.execute(
+                "update tasks set last_status=?,last_found=?,last_deleted=?,last_duration_ms=?,last_message=?,updated_at=? where id=?",
+                ("ok", found, deleted_count, duration, message, now_ts(), task_id),
+            )
+
+        # 4. Notify via webhook
+        await notify(
+            f"定时任务：{task_name}",
+            f"模式：{mode}\n命中：{found} 条\n自动删除：{deleted_count} 条\n耗时：{duration}ms",
+        )
+        log("TASK", f"[{task_name}] 完成：{message}")
+    except Exception as exc:
+        with connect() as db:
+            db.execute(
+                "update tasks set last_status=?,last_message=?,updated_at=? where id=?",
+                ("error", str(exc), now_ts(), task_id),
+            )
+        log("ERROR", f"[{task_name}] 执行失败：{exc}")
+        await notify(f"定时任务失败：{task_name}", str(exc))
+
+
+def queue_deletes(ids: list[str]) -> int:
+    """Queue items for deletion. Returns count of newly queued."""
+    ids = list(dict.fromkeys(ids))
+    if not ids:
+        return 0
+    placeholders = ",".join("?" for _ in ids)
+    queued = 0
+    with connect() as db:
+        rows = db.execute(
+            f"select emby_id,name,size,path from media_items where emby_id in ({placeholders})",
+            ids,
+        ).fetchall()
+        queued_existing = {
+            row["emby_id"]
+            for row in db.execute(
+                f"select emby_id from delete_queue where status in ('pending','running') and emby_id in ({placeholders})",
+                ids,
+            ).fetchall()
+        }
+        for row in rows:
+            if row["emby_id"] in queued_existing:
+                continue
+            db.execute(
+                """
+                insert into delete_queue(emby_id,name,path,size,status,created_at)
+                values(?,?,?,?,?,?)
+                """,
+                (row["emby_id"], row["name"], row["path"], row["size"] or 0, "pending", now_ts()),
+            )
+            queued += 1
+    if queued:
+        ensure_delete_worker()
+    return queued
+
+
+# ---------------------------------------------------------------------------
+#  Basic routes
+# ---------------------------------------------------------------------------
+
 @app.get("/", response_class=HTMLResponse)
 async def index() -> str:
     return (Path(__file__).parent / "static" / "index.html").read_text("utf-8")
@@ -132,7 +377,7 @@ async def index() -> str:
 
 @app.get("/api/health")
 async def health_api() -> dict[str, Any]:
-    return {"ok": True}
+    return {"ok": True, "version": "2.0.0"}
 
 
 @app.get("/api/status")
@@ -142,6 +387,21 @@ async def status_api() -> dict[str, Any]:
         total = db.execute("select count(*) c from media_items").fetchone()["c"]
         connected = bool(cfg.get("host") and cfg.get("access_token"))
         last_log_row = db.execute("select line from logs order by id desc limit 1").fetchone()
+
+        # Library storage stats
+        lib_stats = db.execute(
+            """
+            select library_id, library_name,
+                   count(*) as item_count,
+                   coalesce(sum(size),0) as total_size,
+                   sum(case when has_poster=0 then 1 else 0 end) as no_poster,
+                   sum(case when duration_seconds=0 then 1 else 0 end) as no_duration
+            from media_items where is_media=1
+            group by library_id
+            order by total_size desc
+            """
+        ).fetchall()
+
         return {
             "local_cache": total,
             "media_cache": db.execute("select count(*) c from media_items where is_media = 1").fetchone()["c"],
@@ -155,6 +415,7 @@ async def status_api() -> dict[str, Any]:
             "delete_total": db.execute("select count(*) c from delete_queue where status in ('pending','running','done')").fetchone()["c"],
             "delete_pending": db.execute("select count(*) c from delete_queue where status='pending'").fetchone()["c"],
             "delete_running": db.execute("select count(*) c from delete_queue where status='running'").fetchone()["c"],
+            "delete_failed": db.execute("select count(*) c from delete_queue where status='failed'").fetchone()["c"],
             "sync_lib": get_stat(db, "sync_lib", ""),
             "sync_current": get_stat(db, "sync_current", 0),
             "sync_expected": get_stat(db, "sync_expected", 0),
@@ -168,8 +429,24 @@ async def status_api() -> dict[str, Any]:
             "sync_cron": cfg.get("cron_sync", ""),
             "last_log": LOGS[-1] if LOGS else (last_log_row["line"] if last_log_row else ""),
             "status_checked_at": now_ts(),
+            "library_stats": [
+                {
+                    "library_id": r["library_id"],
+                    "library_name": r["library_name"],
+                    "item_count": r["item_count"],
+                    "total_size": r["total_size"],
+                    "no_poster": r["no_poster"],
+                    "no_duration": r["no_duration"],
+                }
+                for r in lib_stats
+            ],
+            "total_storage": sum(r["total_size"] for r in lib_stats),
         }
 
+
+# ---------------------------------------------------------------------------
+#  Config
+# ---------------------------------------------------------------------------
 
 @app.get("/api/config")
 async def cfg_get() -> dict[str, Any]:
@@ -213,6 +490,10 @@ async def cfg_post(req: ConfigRequest) -> dict[str, Any]:
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+#  Libraries
+# ---------------------------------------------------------------------------
+
 @app.get("/api/libraries")
 async def libs_g() -> list[dict[str, Any]]:
     with connect() as db:
@@ -251,6 +532,10 @@ def db_count_library(library_id: str) -> int:
             (library_id,),
         ).fetchone()["c"]
 
+
+# ---------------------------------------------------------------------------
+#  Sync metadata
+# ---------------------------------------------------------------------------
 
 async def sync_metadata(library_ids: list[str] | None = None) -> None:
     async with SYNC_LOCK:
@@ -348,12 +633,19 @@ async def sync_metadata(library_ids: list[str] | None = None) -> None:
                 set_stat(db, "sync_expected", 0)
                 media_total = db.execute("select count(*) c from media_items where is_media=1").fetchone()["c"]
                 set_stat(db, "library_expected", total_expected)
-            log("SYNC", f"同步完成：API {len(seen)} 条，媒体缓存 {media_total} 条，清理失效缓存 {removed} 条，耗时 {int((time.time()-started)*1000)}ms")
+            duration_ms = int((time.time() - started) * 1000)
+            log("SYNC", f"同步完成：API {len(seen)} 条，媒体缓存 {media_total} 条，清理失效缓存 {removed} 条，耗时 {duration_ms}ms")
+            await notify("元数据同步完成", f"缓存 {media_total} 条，清理失效 {removed} 条，耗时 {duration_ms}ms")
         except Exception as exc:
             with connect() as db:
                 set_stat(db, "sync_lib", "")
             log("ERROR", f"同步失败：{exc}")
+            await notify("元数据同步失败", str(exc))
 
+
+# ---------------------------------------------------------------------------
+#  Scan
+# ---------------------------------------------------------------------------
 
 @app.get("/api/scan")
 async def scan_api(
@@ -391,7 +683,7 @@ async def scan_api(
             for group in data:
                 items = [item for item in group["items"] if item.get("emby_id") not in deleting_ids]
                 removed += len(group["items"]) - len(items)
-                if len(items) > 1 or (mode in {"noposter", "tiny"} and items):
+                if len(items) > 1 or (mode in {"noposter", "tiny", "nometa", "nosub", "emptylib"} and items):
                     filtered.append({**group, "items": items})
             data = filtered
             if removed:
@@ -400,42 +692,15 @@ async def scan_api(
     return data
 
 
+# ---------------------------------------------------------------------------
+#  Delete queue
+# ---------------------------------------------------------------------------
+
 @app.post("/api/delete")
 async def dele_post(req: DeleteRequest) -> dict[str, Any]:
-    queued = 0
-    skipped = 0
-    ids = list(dict.fromkeys(req.ids))
-    if not ids:
-        return {"status": "ok", "queued": 0, "skipped": 0, "message": "没有可加入队列的条目"}
-    placeholders = ",".join("?" for _ in ids)
-    with connect() as db:
-        rows = db.execute(
-            f"select emby_id,name,size,path from media_items where emby_id in ({placeholders})",
-            ids,
-        ).fetchall()
-        known = {row["emby_id"] for row in rows}
-        queued_existing = {
-            row["emby_id"]
-            for row in db.execute(
-                f"select emby_id from delete_queue where status in ('pending','running') and emby_id in ({placeholders})",
-                ids,
-            ).fetchall()
-        }
-        for row in rows:
-            if row["emby_id"] in queued_existing:
-                skipped += 1
-                continue
-            db.execute(
-                """
-                insert into delete_queue(emby_id,name,path,size,status,created_at)
-                values(?,?,?,?,?,?)
-                """,
-                (row["emby_id"], row["name"], row["path"], row["size"] or 0, "pending", now_ts()),
-            )
-            queued += 1
-        skipped += len([item_id for item_id in ids if item_id not in known])
+    queued = queue_deletes(req.ids)
+    skipped = len(req.ids) - queued
     log("DELETE", f"加入删除队列：新增 {queued} 条，跳过 {skipped} 条")
-    ensure_delete_worker()
     return {"status": "queued", "queued": queued, "skipped": skipped, "message": f"已加入删除队列 {queued} 条"}
 
 
@@ -458,11 +723,25 @@ async def delete_worker() -> None:
         log("DELETE", "删除队列 worker 已启动")
         while True:
             with connect() as db:
+                # Re-queue failed items that haven't exceeded retry limit
+                prefs = get_config(db).get("prefs", {})
+                max_retries = int(prefs.get("delete_retry_max", 3))
+                db.execute(
+                    """
+                    update delete_queue set status='pending', error=NULL
+                    where status='failed' and retry_count < ?
+                    """,
+                    (max_retries,),
+                )
                 row = db.execute(
                     "select * from delete_queue where status='pending' order by id asc limit 1"
                 ).fetchone()
                 if not row:
                     db.execute("delete from delete_queue where status='done'")
+                    db.execute(
+                        "delete from delete_queue where status='failed' and retry_count >= ?",
+                        (max_retries,),
+                    )
                     set_stat(db, "delete_current", 0)
                     set_stat(db, "delete_total", 0)
                     break
@@ -498,25 +777,71 @@ async def delete_worker() -> None:
                 failed += 1
                 with connect() as db:
                     db.execute(
-                        "update delete_queue set status='failed', error=?, finished_at=? where id=?",
+                        """
+                        update delete_queue set status='failed', error=?, finished_at=?,
+                          retry_count = coalesce(retry_count,0) + 1
+                        where id=?
+                        """,
                         (str(exc), now_ts(), row["id"]),
                     )
-                log("ERROR", f"[队列#{row['id']}] 删除 {row['emby_id']} 失败：{exc}")
+                log("ERROR", f"[队列#{row['id']}] 删除 {row['emby_id']} 失败 (重试 {row['retry_count'] + 1}/{max_retries})：{exc}")
             await asyncio.sleep(DELETE_CONFIRM_INTERVAL)
+
+        # Auto-refresh Emby library after batch deletion
+        if deleted > 0:
+            prefs_auto = True
+            with connect() as db:
+                prefs_auto = get_config(db).get("prefs", {}).get("auto_refresh_library", True)
+            if prefs_auto:
+                log("DELETE", f"批量删除完成，触发 Emby 库扫描...")
+                try:
+                    await client.refresh_library()
+                    log("DELETE", "Emby 库刷新指令已发送")
+                except EmbyError as exc:
+                    log("ERROR", f"Emby 库刷新失败：{exc}")
+
         log("DELETE", f"删除队列完成：成功 {deleted} 条，失败 {failed} 条，释放 {saved} bytes")
+        if deleted > 0:
+            await notify(
+                "删除完成",
+                f"成功删除 {deleted} 条\n释放空间 {saved:,} bytes\n失败 {failed} 条",
+            )
 
 
 @app.get("/api/delete-queue")
 async def delete_queue_get() -> dict[str, Any]:
-        with connect() as db:
-            rows = db.execute(
-                "select id,emby_id,name,status,error,created_at,started_at,finished_at from delete_queue order by id asc limit 200"
-            ).fetchall()
-            counts = {
-                row["status"]: row["c"]
-                for row in db.execute("select status,count(*) c from delete_queue group by status").fetchall()
-            }
-        return {"running": is_delete_worker_running(), "counts": counts, "items": [dict(row) for row in rows]}
+    with connect() as db:
+        rows = db.execute(
+            "select id,emby_id,name,status,error,retry_count,created_at,started_at,finished_at from delete_queue order by id asc limit 200"
+        ).fetchall()
+        counts = {
+            row["status"]: row["c"]
+            for row in db.execute("select status,count(*) c from delete_queue group by status").fetchall()
+        }
+    return {"running": is_delete_worker_running(), "counts": counts, "items": [dict(row) for row in rows]}
+
+
+@app.post("/api/delete-queue/retry")
+async def delete_retry() -> dict[str, Any]:
+    """Reset all failed queue items to pending for re-processing."""
+    with connect() as db:
+        count = db.execute(
+            "update delete_queue set status='pending', error=NULL where status='failed'"
+        ).rowcount
+    if count:
+        ensure_delete_worker()
+    log("DELETE", f"手动重试 {count} 条失败记录")
+    return {"status": "ok", "retried": count}
+
+
+@app.post("/api/delete-queue/clear")
+async def delete_clear() -> dict[str, Any]:
+    """Clear all done/failed items from the queue."""
+    with connect() as db:
+        count = db.execute(
+            "delete from delete_queue where status in ('done','failed')"
+        ).rowcount
+    return {"status": "ok", "cleared": count}
 
 
 async def wait_item_deleted(client: EmbyClient, item_id: str) -> bool:
@@ -527,6 +852,10 @@ async def wait_item_deleted(client: EmbyClient, item_id: str) -> bool:
         await asyncio.sleep(DELETE_CONFIRM_INTERVAL)
     return False
 
+
+# ---------------------------------------------------------------------------
+#  Emby image proxy
+# ---------------------------------------------------------------------------
 
 @app.get("/emby-image/{item_id}")
 async def emby_image(item_id: str) -> Response:
@@ -541,9 +870,15 @@ async def emby_image(item_id: str) -> Response:
         if resp.status_code >= 400:
             raise HTTPException(resp.status_code, "image unavailable")
         return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(404, str(exc)) from exc
 
+
+# ---------------------------------------------------------------------------
+#  Refresh
+# ---------------------------------------------------------------------------
 
 @app.post("/api/refresh")
 async def refresh_p(req: RefreshRequest) -> dict[str, Any]:
@@ -558,6 +893,22 @@ async def refresh_p(req: RefreshRequest) -> dict[str, Any]:
     log("REFRESH", f"刷新指令已发送 {ok} 条")
     return {"status": "ok", "count": ok}
 
+
+@app.post("/api/refresh-library")
+async def refresh_library_api() -> dict[str, Any]:
+    """Trigger a full Emby library refresh/scan."""
+    client = client_from_db()
+    try:
+        await client.refresh_library()
+        log("REFRESH", "全库刷新指令已发送")
+        return {"status": "ok"}
+    except EmbyError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+#  Ignore list
+# ---------------------------------------------------------------------------
 
 @app.get("/api/ignore")
 async def ignore_get(limit: int = Query(500, ge=1, le=5000), offset: int = Query(0, ge=0)) -> list[dict[str, Any]]:
@@ -594,6 +945,10 @@ async def ignore_del(row_id: int) -> dict[str, Any]:
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+#  Tasks (scheduled scan + auto-delete)
+# ---------------------------------------------------------------------------
+
 @app.get("/api/tasks")
 async def tasks_get() -> list[dict[str, Any]]:
     with connect() as db:
@@ -605,48 +960,48 @@ async def tasks_get() -> list[dict[str, Any]]:
 async def task_post(req: TaskReq) -> dict[str, Any]:
     with connect() as db:
         cur = db.execute(
-            "insert into tasks(name,mode,cron,libraries,enabled,updated_at) values(?,?,?,?,?,?)",
-            (req.name, req.mode, req.cron, req.libraries, int(req.enabled), now_ts()),
+            "insert into tasks(name,mode,cron,libraries,enabled,auto_delete,updated_at) values(?,?,?,?,?,?,?)",
+            (req.name, req.mode, req.cron, req.libraries, int(req.enabled), int(req.auto_delete), now_ts()),
         )
-        return {"status": "ok", "id": cur.lastrowid}
+        new_id = cur.lastrowid
+    reload_task_schedules()
+    log("TASK", f"创建任务 [{req.name}]：{req.cron}，自动删除={'开' if req.auto_delete else '关'}")
+    return {"status": "ok", "id": new_id}
 
 
 @app.put("/api/tasks/{tid}")
 async def task_put(tid: int, req: TaskReq) -> dict[str, Any]:
     with connect() as db:
         db.execute(
-            "update tasks set name=?,mode=?,cron=?,libraries=?,enabled=?,updated_at=? where id=?",
-            (req.name, req.mode, req.cron, req.libraries, int(req.enabled), now_ts(), tid),
+            "update tasks set name=?,mode=?,cron=?,libraries=?,enabled=?,auto_delete=?,updated_at=? where id=?",
+            (req.name, req.mode, req.cron, req.libraries, int(req.enabled), int(req.auto_delete), now_ts(), tid),
         )
+    reload_task_schedules()
+    log("TASK", f"更新任务 [{req.name}]")
     return {"status": "ok"}
 
 
 @app.delete("/api/tasks/{row_id}")
 async def task_del(row_id: int) -> dict[str, Any]:
+    job_id = f"{TASK_SCHED_PREFIX}{row_id}"
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
     with connect() as db:
         db.execute("delete from tasks where id = ?", (row_id,))
+    log("TASK", f"删除任务 #{row_id}")
     return {"status": "ok"}
 
 
 @app.post("/api/tasks/{row_id}/run")
 async def task_run_now(row_id: int) -> dict[str, Any]:
-    with connect() as db:
-        task = db.execute("select * from tasks where id = ?", (row_id,)).fetchone()
-    if not task:
-        raise HTTPException(404, "task not found")
-    started = time.time()
-    await sync_metadata([x for x in task["libraries"].split(",") if x])
-    data = await scan_api(task["mode"], task["libraries"])
-    duration = int((time.time() - started) * 1000)
-    found = sum(len(g["items"]) for g in data)
-    message = f"命中 {found} 条"
-    with connect() as db:
-        db.execute(
-            "update tasks set last_status=?,last_found=?,last_duration_ms=?,last_message=?,updated_at=? where id=?",
-            ("ok", found, duration, message, now_ts(), row_id),
-        )
-    return {"status": "ok", "found": found, "last_message": message}
+    """Run a task immediately."""
+    asyncio.create_task(scheduled_task_run(row_id))
+    return {"status": "ok", "message": "任务已触发"}
 
+
+# ---------------------------------------------------------------------------
+#  Logs
+# ---------------------------------------------------------------------------
 
 @app.get("/api/logs")
 async def logs_g() -> list[str]:
@@ -662,6 +1017,10 @@ async def logs_c() -> dict[str, Any]:
         db.execute("delete from logs")
     return {"status": "ok"}
 
+
+# ---------------------------------------------------------------------------
+#  Webhook test
+# ---------------------------------------------------------------------------
 
 @app.post("/api/test_webhook")
 async def tw_p() -> dict[str, Any]:

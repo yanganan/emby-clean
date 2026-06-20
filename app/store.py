@@ -6,7 +6,7 @@ import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Generator
 
 
 DATA_DIR = Path(os.getenv("EMBY_CLEAN_DATA", "./data")).resolve()
@@ -21,6 +21,9 @@ DEFAULT_PREFS = {
     "duration_precision": "second",
     "smart_keep": "reso_max",
     "confirm_batch": "true",
+    "auto_refresh_library": True,
+    "delete_retry_max": 3,
+    "delete_retry_delay": 10,
 }
 
 
@@ -87,6 +90,7 @@ def init_db() -> None:
               size integer default 0,
               status text not null default 'pending',
               error text,
+              retry_count integer default 0,
               created_at integer not null,
               started_at integer,
               finished_at integer
@@ -110,8 +114,10 @@ def init_db() -> None:
               cron text not null,
               libraries text not null default '',
               enabled integer not null default 1,
+              auto_delete integer not null default 0,
               last_status text,
               last_found integer default 0,
+              last_deleted integer default 0,
               last_duration_ms integer default 0,
               last_message text,
               updated_at integer
@@ -128,6 +134,9 @@ def init_db() -> None:
         ensure_column(db, "media_items", "image_url", "text")
         ensure_column(db, "media_items", "is_media", "integer default 0")
         ensure_column(db, "libraries", "api_count", "integer default 0")
+        ensure_column(db, "delete_queue", "retry_count", "integer default 0")
+        ensure_column(db, "tasks", "auto_delete", "integer not null default 0")
+        ensure_column(db, "tasks", "last_deleted", "integer default 0")
         db.execute("update libraries set api_count = item_count where coalesce(api_count,0) = 0")
         db.execute(
             """
@@ -150,10 +159,12 @@ def init_db() -> None:
 
 
 @contextmanager
-def connect() -> Iterable[sqlite3.Connection]:
+def connect() -> Generator[sqlite3.Connection, None, None]:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB_PATH)
     db.row_factory = sqlite3.Row
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=5000")
     try:
         yield db
         db.commit()
