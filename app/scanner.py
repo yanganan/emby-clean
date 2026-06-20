@@ -108,6 +108,11 @@ def prune_missing(db: sqlite3.Connection, seen_ids: set[str], library_ids: list[
 def scan(db: sqlite3.Connection, mode: str, libs: list[str], params: dict[str, str], prefs: dict[str, Any]) -> list[dict[str, Any]]:
     rows = load_items(db, libs)
     ignored_items, ignored_groups = load_ignored(db, mode)
+
+    # New "report" modes that don't need the is_media filter or grouping
+    if mode in {"nometa", "nosub", "emptylib"}:
+        return _scan_report(db, mode, libs, rows, ignored_items)
+
     rows = [r for r in rows if r["emby_id"] not in ignored_items and r["is_media"]]
     grouped: dict[str, list[sqlite3.Row]] = defaultdict(list)
     group_meta: dict[str, dict[str, Any]] = {}
@@ -178,6 +183,108 @@ def scan(db: sqlite3.Connection, mode: str, libs: list[str], params: dict[str, s
             }
         )
     result.sort(key=lambda g: (-len(g["items"]), g["title"]))
+    return result
+
+
+def _scan_report(
+    db: sqlite3.Connection,
+    mode: str,
+    libs: list[str],
+    rows: list[sqlite3.Row],
+    ignored_items: set[str],
+) -> list[dict[str, Any]]:
+    """Report-style scans: each hit is its own group (1 item per group).
+
+    - ``nometa``: media items missing provider IDs (no metadata provider)
+    - ``nosub``: media items missing subtitles (no subtitle stream)
+    - ``emptylib``: libraries with 0 media items
+    """
+    if mode == "emptylib":
+        # Query libraries table for zero-count libs
+        lib_rows = db.execute("select id, name, collection_type, item_count from libraries").fetchall()
+        result = []
+        for lib in lib_rows:
+            media_count = db.execute(
+                "select count(*) c from media_items where library_id=? and is_media=1",
+                (lib["id"],),
+            ).fetchone()["c"]
+            if media_count == 0:
+                item = {
+                    "emby_id": lib["id"],
+                    "name": lib["name"],
+                    "library_id": lib["id"],
+                    "library_name": lib["name"],
+                    "path": "",
+                    "item_type": "Library",
+                    "size": 0,
+                    "resolution": 0,
+                    "duration": 0,
+                    "has_poster": False,
+                    "tag_c": False,
+                    "tag_uc": False,
+                    "tag_u": False,
+                    "tag_crack": False,
+                    "tag_leak": False,
+                    "version_rank": 0,
+                    "display_path": "",
+                    "mode": mode,
+                    "recommend_action": "",
+                    "recommend_reason": "空媒体库，建议检查",
+                }
+                result.append({
+                    "title": f"空媒体库：{lib['name']}",
+                    "group_key": f"emptylib:{lib['id']}",
+                    "ignore_scope": "group",
+                    "group_meta": {"collection_type": lib["collection_type"]},
+                    "items": [item],
+                    "summary": {"keep": 0, "delete": 0, "review": 1, "total": 1},
+                })
+        return result
+
+    # nometa / nosub: filter media items
+    filtered = [r for r in rows if r["emby_id"] not in ignored_items and r["is_media"]]
+    if libs:
+        lib_set = set(libs)
+        filtered = [r for r in filtered if r["library_id"] in lib_set]
+
+    result = []
+    for row in filtered:
+        raw = row["raw_json"] if "raw_json" in row.keys() else ""
+        hit = False
+        reason = ""
+
+        if mode == "nometa":
+            provider_key = row["provider_key"] if "provider_key" in row.keys() else ""
+            if not provider_key:
+                hit = True
+                reason = "缺少外部元数据 Provider ID（无 TMDB/IMDB 等）"
+
+        elif mode == "nosub":
+            # Check raw_json for subtitle streams
+            try:
+                data = json.loads(raw) if raw else {}
+            except (json.JSONDecodeError, TypeError):
+                data = {}
+            streams = data.get("MediaStreams") or []
+            has_sub = any(s.get("Type") == "Subtitle" for s in streams)
+            if not has_sub:
+                hit = True
+                reason = "无字幕轨道"
+
+        if hit:
+            item = decorate_item(dict(row), mode)
+            item["recommend_action"] = ""
+            item["recommend_reason"] = reason
+            result.append({
+                "title": reason,
+                "group_key": f"{mode}:{row['emby_id']}",
+                "ignore_scope": "item",
+                "group_meta": {},
+                "items": [item],
+                "summary": {"keep": 0, "delete": 0, "review": 1, "total": 1},
+            })
+
+    result.sort(key=lambda g: g["title"])
     return result
 
 

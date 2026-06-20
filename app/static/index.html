@@ -19,6 +19,8 @@
     .group{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px;background:rgba(0,0,0,.12)}.group-head{padding:12px 14px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.item{display:grid;grid-template-columns:auto 76px 1fr auto;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);align-items:center}.poster{width:76px;height:112px;border-radius:8px;object-fit:cover;background:#050811;border:1px solid var(--line)}.no-poster{display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;text-align:center}
     .item small{color:var(--muted);display:block;word-break:break-all;margin-top:4px}.badge{border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}.badge.delete{color:#ff9bad;border-color:rgba(251,91,117,.45)}.badge.keep{color:#76e6b7;border-color:rgba(55,217,158,.45)}.badge.review{color:#ffd166;border-color:rgba(255,209,102,.5)}.badge.rank{color:#bfe5ff;border-color:rgba(77,181,255,.45)}
     .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:#050811;border:1px solid var(--line);border-radius:8px;padding:18px;min-height:460px;overflow:auto}.mini{font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
+    .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin:2px}.tag.pending{background:rgba(77,181,255,.15);color:#4db5ff}.tag.running{background:rgba(255,209,102,.15);color:#ffd166}.tag.failed{background:rgba(251,91,117,.15);color:#fb5b75}.tag.done{background:rgba(55,217,158,.15);color:#37d99e}
+    .lib-bar{background:rgba(255,255,255,.06);border-radius:4px;height:8px;overflow:hidden;margin-top:6px}.lib-bar-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--ok));transition:width .3s}
     @media(max-width:960px){
       body{display:block}
       aside{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:14px;background:rgba(7,11,22,.96)}
@@ -31,8 +33,8 @@
       body:not([data-page="clean"]) aside .panel,body:not([data-page="clean"]) aside>p{display:none}
       body:not([data-page="clean"]) aside{position:sticky;top:0;z-index:9}
       body:not([data-page="clean"]) .brand{margin-bottom:6px}
-      .nav{grid-template-columns:repeat(4,minmax(86px,1fr));gap:8px;margin-top:10px;position:sticky;top:0;z-index:8;background:rgba(7,11,22,.96);padding:8px 0}
-      .nav button{padding:10px 8px;font-size:13px}
+      .nav{grid-template-columns:repeat(6,minmax(70px,1fr));gap:6px;margin-top:10px;position:sticky;top:0;z-index:8;background:rgba(7,11,22,.96);padding:8px 0}
+      .nav button{padding:10px 6px;font-size:12px}
       .libs,.modes{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chip{min-height:66px;padding:12px 10px}
       .split{grid-template-columns:1fr}.split button{width:100%}
       .row>div[style*="width"]{width:calc(50% - 5px)!important}
@@ -46,7 +48,7 @@
     }
     @media(max-width:520px){
       aside{padding:12px}.brand{margin-bottom:10px}main{padding:12px 10px 92px}
-      aside .panel{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,minmax(0,1fr));position:static}
+      aside .panel{grid-template-columns:1fr}.nav{grid-template-columns:repeat(3,minmax(0,1fr));position:static}
       .libs,.modes{grid-template-columns:1fr}.row>div[style*="width"]{width:100%!important}
       .stickybar{margin-left:-10px;margin-right:-10px;padding:10px}.stickybar .row{grid-template-columns:repeat(3,minmax(0,1fr))}.stickybar .row .danger{grid-column:1/-1}
       .item{grid-template-columns:28px 68px minmax(0,1fr);padding:10px}.poster{width:68px;height:98px}.item>.row{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -63,6 +65,7 @@
       <div class="stat"><span>用户</span><strong id="user">-</strong></div>
       <div class="stat"><span>缓存媒体</span><strong id="cache">0</strong></div>
       <div class="stat"><span>媒体对账</span><strong id="expected">0</strong></div>
+      <div class="stat"><span>总占用</span><strong id="total_storage">-</strong></div>
       <div class="stat"><span>已清理</span><strong id="cleaned">0</strong></div>
       <div class="stat"><span>释放</span><strong id="saved">0 B</strong></div>
       <p id="ready" class="muted">连接状态检测中</p>
@@ -70,18 +73,21 @@
       <button class="primary" onclick="syncNow()" style="width:100%">立即同步元数据</button>
     </div>
     <div class="nav">
-      <button class="active" onclick="nav('clean',this)">扫描配置</button>
-      <button onclick="nav('results',this)">扫描结果</button>
-      <button onclick="nav('settings',this)">系统配置</button>
-      <button onclick="nav('logs',this)">日志中心</button>
+      <button class="active" onclick="nav('clean',this)">扫描</button>
+      <button onclick="nav('results',this)">结果</button>
+      <button onclick="nav('tasks',this)">任务</button>
+      <button onclick="nav('settings',this)">配置</button>
+      <button onclick="nav('storage',this)">存储</button>
+      <button onclick="nav('logs',this)">日志</button>
     </div>
-    <p class="muted mini" style="margin-top:18px">v1.0 · 不建议映射公网</p>
+    <p class="muted mini" style="margin-top:18px">v2.0 · 不建议映射公网</p>
   </aside>
 
   <main>
+    <!-- ===================== SCAN CONFIG ===================== -->
     <section id="p-clean" class="page active">
       <div class="panel">
-        <div class="split"><h2>1. 选择媒体库</h2><button class="ghost" onclick="toggleAllLibs()">全选/反选媒体库</button></div>
+        <div class="split"><h2>1. 选择媒体库</h2><button class="ghost" onclick="toggleAllLibs()">全选/反选</button></div>
         <div id="libs" class="libs"></div>
       </div>
       <div class="panel">
@@ -100,6 +106,7 @@
       </div>
     </section>
 
+    <!-- ===================== SCAN RESULTS ===================== -->
     <section id="p-results" class="page">
       <div class="stickybar">
         <div class="toolbar">
@@ -125,6 +132,34 @@
       <div id="result"></div>
     </section>
 
+    <!-- ===================== TASKS ===================== -->
+    <section id="p-tasks" class="page">
+      <div class="panel">
+        <h2>定时任务</h2>
+        <p class="muted mini">定时执行同步 + 扫描。开启「自动删除」后，扫描命中的推荐删除项会自动入队。</p>
+        <div id="task_list"></div>
+        <button class="ghost" onclick="showTaskForm()" style="margin-top:14px;width:100%">+ 新建任务</button>
+      </div>
+      <div id="task_form_panel" class="panel" style="display:none">
+        <h2 id="task_form_title">新建任务</h2>
+        <label>任务名称</label><input id="task_name" placeholder="每日 AV 查重">
+        <div class="row">
+          <div style="flex:1"><label>扫描模式</label><select id="task_mode"></select></div>
+          <div style="flex:1"><label>Cron 表达式</label><input id="task_cron" placeholder="0 4 * * *"></div>
+        </div>
+        <label>媒体库 (逗号分隔，留空为全部)</label><input id="task_libs" placeholder="留空全部">
+        <div class="row" style="margin-top:10px">
+          <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="task_auto_delete" style="width:auto;min-height:auto"> 自动删除推荐项</label>
+          <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="task_enabled" style="width:auto;min-height:auto" checked> 启用</label>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="primary" onclick="saveTask()">保存任务</button>
+          <button class="ghost" onclick="hideTaskForm()">取消</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SETTINGS ===================== -->
     <section id="p-settings" class="page">
       <div class="grid two">
         <div class="panel">
@@ -133,9 +168,13 @@
           <label>用户名</label><input id="cfg_user">
           <label>密码</label><input id="pwd" type="password">
           <label>通知 Webhook</label><input id="webhook">
-          <label>自动更新媒体库</label><input id="cron_sync" placeholder="0 4 * * *">
-          <p class="muted mini">留空为关闭；示例：<code>0 4 * * *</code> 表示每天 04:00 自动同步媒体库信息。</p>
-          <button class="primary" onclick="saveConfig()" style="margin-top:14px;width:100%">保存配置</button>
+          <label>自动同步元数据 Cron</label><input id="cron_sync" placeholder="0 4 * * *">
+          <p class="muted mini">留空为关闭；示例：<code>0 4 * * *</code> 表示每天 04:00 自动同步。Token 过期后会自动使用存储的密码重新认证。</p>
+          <div class="row" style="margin-top:14px">
+            <button class="primary" onclick="saveConfig()">保存配置</button>
+            <button class="ghost" onclick="testWebhook()">测试 Webhook</button>
+            <button class="ghost" onclick="refreshLibrary()">刷新 Emby 库</button>
+          </div>
         </div>
         <div class="panel">
           <h2>智能处理偏好</h2>
@@ -143,12 +182,33 @@
           <label>同大推荐规则</label><select id="pref_size"><option value="path_long">最长路径</option><option value="path_short">最短路径</option><option value="name_long">最长名称</option><option value="name_short">最短名称</option></select>
           <label>时长推荐规则</label><select id="pref_duration"><option value="min">选最小文件</option><option value="max">选最大文件</option></select>
           <label>洗版推荐规则</label><select id="pref_smart"><option value="reso_max">最高分辨率</option><option value="reso_min">最低分辨率</option></select>
+          <label>删除失败自动重试次数</label><input id="pref_retry" type="number" value="3" min="0" max="10">
+          <label style="display:flex;align-items:center;gap:6px;margin-top:12px"><input type="checkbox" id="pref_auto_refresh" style="width:auto;min-height:auto"> 删除后自动刷新 Emby 媒体库</label>
           <button class="ghost" onclick="saveConfig()" style="margin-top:14px;width:100%">保存偏好</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>删除队列</h2>
+        <div id="delete_queue" class="muted">加载中</div>
+        <div class="row" style="margin-top:12px">
+          <button class="ghost" onclick="loadDeleteQueue()">刷新</button>
+          <button class="ghost" onclick="retryFailed()">重试失败项</button>
+          <button class="ghost" onclick="clearDone()">清理已完成</button>
         </div>
       </div>
       <div class="panel"><h2>黑名单管理</h2><div id="ignored" class="muted">加载中</div></div>
     </section>
 
+    <!-- ===================== STORAGE DASHBOARD ===================== -->
+    <section id="p-storage" class="page">
+      <h1>存储仪表盘</h1>
+      <div class="panel">
+        <h2>按媒体库统计</h2>
+        <div id="storage_list"></div>
+      </div>
+    </section>
+
+    <!-- ===================== LOGS ===================== -->
     <section id="p-logs" class="page">
       <div class="toolbar"><h1>系统日志</h1><button class="ghost" onclick="clearLogs()">清空</button></div>
       <div id="logs" class="log"></div>
@@ -157,36 +217,75 @@
 
   <script>
     const $=id=>document.getElementById(id);
-    const modes=[['av','🔞 番号查重'],['smart','🧠 智能洗版'],['size','⚖️ 同大查重'],['duration','⏳ 时长查重'],['noposter','🖼️ 缺失封面'],['tiny','🐜 极小文件']];
-    let state={mode:'av',libs:new Set(),libraries:[],data:[],flat:[],selected:new Set(),config:{},page:1,pageSize:100,active:'clean'};
+    const modes=[
+      ['av','🔞 番号查重'],['smart','🧠 智能洗版'],['size','⚖️ 同大查重'],['duration','⏳ 时长查重'],
+      ['noposter','🖼️ 缺失封面'],['tiny','🐜 极小文件'],
+      ['nometa','📋 无元数据'],['nosub','💬 无字幕'],['emptylib','📂 空库检测']
+    ];
+    const modeSelectOpts=modes.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
+    let state={mode:'av',libs:new Set(),libraries:[],data:[],flat:[],selected:new Set(),config:{},page:1,pageSize:100,active:'clean',taskEditId:null};
+    let pollTimer=null;
 
-    function nav(name,btn){document.body.dataset.page=name;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');state.active=name;if(name==='settings'){loadConfig();loadIgnored()}if(name==='logs')loadLogs()}
-    function navByName(name){const btn=[...document.querySelectorAll('.nav button')].find(b=>b.textContent.includes(name==='clean'?'扫描配置':name==='results'?'扫描结果':name));nav(name,btn)}
+    function nav(name,btn){document.body.dataset.page=name;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');state.active=name;if(name==='settings'){loadConfig();loadIgnored();loadDeleteQueue()}if(name==='logs')loadLogs();if(name==='storage')loadStorage();if(name==='tasks')loadTasks()}
+    function navByName(name){const map={'clean':'扫描','results':'结果','tasks':'任务','settings':'配置','storage':'存储','logs':'日志'};const btn=[...document.querySelectorAll('.nav button')].find(b=>b.textContent.includes(map[name]||name));nav(name,btn)}
     function bytes(n){n=Number(n||0);const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`}
     function note(msg){$('sync_detail').textContent=msg}
 
-    async function poll(){const s=await(await fetch('/api/status')).json();$('server').textContent=s.server_name||'-';$('ver').textContent=s.server_ver||'-';$('user').textContent=s.user_name||'-';$('cache').textContent=s.media_cache??s.local_cache??0;$('expected').textContent=`${s.media_cache??0} / ${s.library_expected||0}`;$('cleaned').textContent=s.cleaned_count||0;$('saved').textContent=bytes(s.saved_space||0);$('ready').innerHTML=s.connected?'<span class="ok">已连接</span>':'未连接';$('sync_detail').textContent=s.is_deleting?`删除中：${s.delete_current||0}/${s.delete_total||0}`:(s.is_syncing?`同步中：${s.sync_lib||'-'} · 当前库 ${s.sync_current||0}/${s.sync_expected||0} · 累计 ${s.sync_total||0}`:(s.last_log||''));if(state.active==='logs')loadLogs(false)}
-    async function loadConfig(){const c=await(await fetch('/api/config')).json();state.config=c;$('host').value=c.host||'';$('cfg_user').value=c.user||'';$('webhook').value=c.webhook||'';$('cron_sync').value=c.cron_sync||'';const p=c.prefs||{};$('pref_av').value=p.av_keep_priority||'rank';$('pref_size').value=p.size_keep||'path_long';$('pref_duration').value=p.duration_keep||'min';$('pref_smart').value=p.smart_keep||'reso_max'}
-    async function saveConfig(){const payload={host:$('host').value,user:$('cfg_user').value,pwd:$('pwd').value,webhook:$('webhook').value,cron_sync:$('cron_sync').value,prefs:{av_keep_priority:$('pref_av').value,size_keep:$('pref_size').value,duration_keep:$('pref_duration').value,smart_keep:$('pref_smart').value,duration_scope:$('duration_scope').value,duration_precision:$('duration_precision').value,confirm_batch:'true'}};const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok){note(await r.text());return}$('pwd').value='';await init();note('配置已保存')}
-    async function loadLibraries(){const box=$('libs');box.innerHTML='<span class="muted">加载中</span>';try{state.libraries=await(await fetch('/api/libraries')).json();box.innerHTML=state.libraries.map(x=>`<div class="chip ${state.libs.has(x.Id)?'active':''}" data-lib="${x.Id}" onclick="toggleLib('${x.Id}',this)"><strong>${x.Name}</strong><small class="muted">${x.CollectionType||''} · 媒体 ${x.CachedCount??0}/${x.ItemCount??0}</small><small class="muted">API条目 ${x.ApiCount??x.ItemCount??0}</small></div>`).join('')||'<span class="muted">无媒体库</span>'}catch{box.innerHTML='<span class="muted">请先保存 Emby 配置</span>'}}
+    async function poll(){try{const s=await(await fetch('/api/status')).json();$('server').textContent=s.server_name||'-';$('ver').textContent=s.server_ver||'-';$('user').textContent=s.user_name||'-';$('cache').textContent=s.media_cache??s.local_cache??0;$('expected').textContent=`${s.media_cache??0} / ${s.library_expected||0}`;$('total_storage').textContent=bytes(s.total_storage||0);$('cleaned').textContent=s.cleaned_count||0;$('saved').textContent=bytes(s.saved_space||0);$('ready').innerHTML=s.connected?'<span class="ok">已连接</span>':'未连接';$('sync_detail').textContent=s.is_deleting?`删除中：${s.delete_current||0}/${s.delete_total||0}（失败 ${s.delete_failed||0}）`:(s.is_syncing?`同步中：${s.sync_lib||'-'} · ${s.sync_current||0}/${s.sync_expected||0} · 累计 ${s.sync_total||0}`:(s.last_log||''));if(state.active==='logs')loadLogs(false);if(state.active==='storage')loadStorage(false)}catch{}}
+
+    // ---- Config ----
+    async function loadConfig(){const c=await(await fetch('/api/config')).json();state.config=c;$('host').value=c.host||'';$('cfg_user').value=c.user||'';$('webhook').value=c.webhook||'';$('cron_sync').value=c.cron_sync||'';const p=c.prefs||{};$('pref_av').value=p.av_keep_priority||'rank';$('pref_size').value=p.size_keep||'path_long';$('pref_duration').value=p.duration_keep||'min';$('pref_smart').value=p.smart_keep||'reso_max';$('pref_retry').value=p.delete_retry_max??3;$('pref_auto_refresh').checked=p.auto_refresh_library!==false}
+    async function saveConfig(){const payload={host:$('host').value,user:$('cfg_user').value,pwd:$('pwd').value,webhook:$('webhook').value,cron_sync:$('cron_sync').value,prefs:{av_keep_priority:$('pref_av').value,size_keep:$('pref_size').value,duration_keep:$('pref_duration').value,smart_keep:$('pref_smart').value,duration_scope:$('duration_scope').value,duration_precision:$('duration_precision').value,confirm_batch:'true',auto_refresh_library:$('pref_auto_refresh').checked,delete_retry_max:Number($('pref_retry').value||3)}};const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok){note(await r.text());return}$('pwd').value='';await init();note('配置已保存')}
+    async function testWebhook(){const r=await fetch('/api/test_webhook',{method:'POST'});const d=await r.json();note(d.message||'已发送')}
+    async function refreshLibrary(){await fetch('/api/refresh-library',{method:'POST'});note('Emby 全库刷新已触发')}
+
+    // ---- Libraries ----
+    async function loadLibraries(){const box=$('libs');box.innerHTML='<span class="muted">加载中</span>';try{state.libraries=await(await fetch('/api/libraries')).json();box.innerHTML=state.libraries.map(x=>`<div class="chip ${state.libs.has(x.Id)?'active':''}" data-lib="${x.Id}" onclick="toggleLib('${x.Id}',this)"><strong>${x.Name}</strong><small class="muted">${x.CollectionType||''} · 媒体 ${x.CachedCount??0}/${x.ItemCount??0}</small><small class="muted">API ${x.ApiCount??x.ItemCount??0}</small></div>`).join('')||'<span class="muted">无媒体库</span>'}catch{box.innerHTML='<span class="muted">请先保存 Emby 配置</span>'}}
     function resetSelection(){state.selected.clear();state.flat=[];state.data=[];state.page=1;renderResults()}function toggleLib(id,el){state.libs.has(id)?state.libs.delete(id):state.libs.add(id);el.classList.toggle('active');resetSelection()}
     function toggleAllLibs(){const all=state.libraries.map(x=>x.Id);const on=state.libs.size!==all.length;state.libs=new Set(on?all:[]);state.selected.clear();state.flat=[];state.data=[];state.page=1;loadLibraries();renderResults()}
-    function renderModes(){$('modes').innerHTML=modes.map(([id,name])=>`<div class="chip ${id===state.mode?'active':''}" onclick="setMode('${id}',this)">${name}</div>`).join('')}
+    function renderModes(){$('modes').innerHTML=modes.map(([id,name])=>`<div class="chip ${id===state.mode?'active':''}" onclick="setMode('${id}',this)">${name}</div>`).join('');$('task_mode').innerHTML=modeSelectOpts}
     function setMode(id,el){state.mode=id;document.querySelectorAll('#modes .chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');state.selected.clear();state.flat=[];state.data=[];state.page=1;renderModeActions();renderResults()}
     function renderModeActions(){let h='<button class="ghost" onclick="selectRecommendedPage()">本页推荐</button>';if(state.mode==='av')h+=`<button class="ghost" onclick="selectByTag('tag_c')">选 [C]</button><button class="ghost" onclick="selectByTag('tag_crack')">选破解</button><button class="ghost" onclick="selectByTag('tag_leak')">只看/选流出</button><button class="ghost" onclick="selectByTag('tag_raw')">选无标签</button>`;if(state.mode==='smart')h+=`<button class="ghost" onclick="selectResolution(true)">保留最高分辨率</button><button class="ghost" onclick="selectResolution(false)">保留最低分辨率</button>`;if(state.mode==='duration')h+=`<button class="ghost" onclick="selectBySize(false)">保留最小文件</button><button class="ghost" onclick="selectBySize(true)">保留最大文件</button>`;$('mode_actions').innerHTML=h}
+
+    // ---- Sync ----
     async function syncNow(){await fetch('/api/sync',{method:'POST'});note('同步已开始，日志会自动更新');navByName('logs')}
 
+    // ---- Scan ----
     async function scan(){state.pageSize=Number($('page_size').value||100);$('result').innerHTML='<div class="panel muted">扫描中...</div>';navByName('results');const url=`/api/scan?mode=${state.mode}&lib=${[...state.libs].join(',')}&param_s=${$('param_s').value}&duration_scope=${$('duration_scope').value}&duration_precision=${$('duration_precision').value}`;state.data=await(await fetch(url)).json();state.flat=state.data.flatMap(g=>g.items.map(i=>({...i,groupTitle:g.title,groupItems:g.items.map(x=>x.emby_id)})));state.page=1;selectRecommendedPage(false);renderResults()}
     function visible(){const start=(state.page-1)*state.pageSize;return state.flat.slice(start,start+state.pageSize)}
     function pageCount(){return Math.max(1,Math.ceil(state.flat.length/state.pageSize))}
     function renderResults(){const vis=visible();$('result_title').textContent=state.flat.length?`扫描结果：${state.data.length} 组 / ${state.flat.length} 条`:'暂无扫描结果';$('result_meta').textContent=`第 ${state.page} / ${pageCount()} 页，本页 ${vis.length} 条，本页已选 ${selectedVisibleIds().length} 条`;if(!state.flat.length){$('result').innerHTML='<div class="panel muted">没有命中结果</div>';return}let last='';let html='';for(const i of vis){if(i.groupTitle!==last){if(last)html+='</div>';const ids=vis.filter(x=>x.groupTitle===i.groupTitle).map(x=>x.emby_id).join(',');html+=`<div class="group"><div class="group-head" onclick="toggleGroup('${ids}')"><strong>${i.groupTitle}</strong><span class="muted">${ids.split(',').length} 条</span></div>`;last=i.groupTitle}html+=itemHtml(i)}if(last)html+='</div>';$('result').innerHTML=html}
-    function itemHtml(i){const img=i.image_url?`<img class="poster" src="${i.image_url}" loading="lazy">`:`<div class="poster no-poster">缺失封面</div>`;const tags=[i.tag_leak?'流出':'',i.tag_crack?'破解':'',i.tag_c?'C':'',i.tag_uc?'UC':'',i.tag_u?'U':''].filter(Boolean).join(' · ')||'无标签';return `<div class="item"><input type="checkbox" ${state.selected.has(i.emby_id)?'checked':''} onchange="toggleItem('${i.emby_id}',this.checked)">${img}<div><strong>${i.name||i.emby_id}</strong> <span class="badge ${i.recommend_action}">${i.recommend_action||'命中'}</span> <span class="badge rank">${tags} · 优先级 ${i.version_rank||0}</span><small>${bytes(i.size)} · ${i.resolution||'-'}P · ${Math.round(i.duration||0)}s</small><small>${i.path||''}</small><small>${i.recommend_reason||''}</small></div><div class="row"><button class="ghost" onclick="ignoreOne('${i.emby_id}')">忽略</button><button class="danger" onclick="deleteOne('${i.emby_id}')">删除</button><button class="ghost" onclick="window.open('${state.config.host}/web/index.html#!/item?id=${i.emby_id}','_blank')">打开</button></div></div>`}
+    function itemHtml(i){const img=i.image_url?`<img class="poster" src="${i.image_url}" loading="lazy">`:`<div class="poster no-poster">缺失封面</div>`;const tags=[i.tag_leak?'流出':'',i.tag_crack?'破解':'',i.tag_c?'C':'',i.tag_uc?'UC':'',i.tag_u?'U':''].filter(Boolean).join(' · ')||'无标签';return `<div class="item"><input type="checkbox" ${state.selected.has(i.emby_id)?'checked':''} onchange="toggleItem('${i.emby_id}',this.checked)">${img}<div><strong>${i.name||i.emby_id}</strong> <span class="badge ${i.recommend_action}">${i.recommend_action||'命中'}</span> <span class="badge rank">${tags} · 优先级 ${i.version_rank||0}</span><small>${bytes(i.size)} · ${i.resolution||'-'}P · ${Math.round(i.duration||0)}s</small><small>${i.path||''}</small><small>${i.recommend_reason||''}</small></div><div class="row"><button class="ghost" onclick="ignoreOne('${i.emby_id}')">忽略</button><button class="danger" onclick="deleteOne('${i.emby_id}')">删除</button><button class="ghost" onclick="window.open('${state.config.host||''}/web/index.html#!/item?id=${i.emby_id}','_blank')">打开</button></div></div>`}
     function toggleItem(id,on){on?state.selected.add(id):state.selected.delete(id);renderResults()}function toggleGroup(ids){const arr=ids.split(',').filter(Boolean);const all=arr.every(id=>state.selected.has(id));arr.forEach(id=>all?state.selected.delete(id):state.selected.add(id));renderResults()}function toggleVisible(on){visible().forEach(i=>on?state.selected.add(i.emby_id):state.selected.delete(i.emby_id));renderResults()}
     function selectRecommendedPage(render=true){state.selected.clear();visible().forEach(i=>i.recommend_action==='delete'?state.selected.add(i.emby_id):state.selected.delete(i.emby_id));if(render)renderResults()}function prevPage(){if(state.page>1){state.page--;selectRecommendedPage(false);renderResults()}}function nextPage(){if(state.page<pageCount()){state.page++;selectRecommendedPage(false);renderResults()}}
     function selectByTag(tag){state.selected.clear();visible().filter(i=>tag==='tag_raw'?!i.tag_c&&!i.tag_uc&&!i.tag_u&&!i.tag_crack&&!i.tag_leak:i[tag]).forEach(i=>state.selected.add(i.emby_id));renderResults()}function selectResolution(highest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(highest?i.resolution>b.resolution:i.resolution<b.resolution)?i:b,null))}function selectBySize(largest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(largest?i.size>b.size:i.size<b.size)?i:b,null))}function selectKeepPerGroup(picker){state.selected.clear();const groups={};visible().forEach(i=>(groups[i.groupTitle]??=[]).push(i));Object.values(groups).forEach(items=>{const keep=picker(items);items.forEach(i=>{if(!keep||i.emby_id!==keep.emby_id)state.selected.add(i.emby_id)})});renderResults()}
     async function ignoreOne(id){state.selected=new Set([id]);await ignoreSelected()}async function deleteOne(id){state.selected=new Set([id]);await deleteSelected()}async function ignoreSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}await postIds('/api/ignore',{ids,mode:state.mode})}function selectedVisibleIds(){const visibleIds=new Set(visible().map(i=>i.emby_id));return [...state.selected].filter(id=>visibleIds.has(id))}async function deleteSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}if(!confirm(`确认将当前页选中的 ${ids.length} 条加入删除队列？`))return;await postIds('/api/delete',{ids})}
     async function postIds(url,payload){const ids=new Set(payload.ids||[]);if(!ids.size){note('当前页未选择条目');return}const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok){note(d.detail||d.message||'操作失败');return}note(d.message||'操作已提交');state.flat=state.flat.filter(i=>!ids.has(i.emby_id));state.data=state.data.map(g=>({...g,items:g.items.filter(i=>!ids.has(i.emby_id))})).filter(g=>g.items.length);ids.forEach(id=>state.selected.delete(id));state.page=Math.min(state.page,pageCount());if(url==='/api/delete')selectRecommendedPage(false);renderResults();loadLogs()}
-    async function loadIgnored(){const rows=await(await fetch('/api/ignore')).json();$('ignored').innerHTML=rows.map(r=>`<div class="stat"><span>${r.mode} · ${r.name||r.group_key||r.emby_id}</span><button class="ghost" onclick="fetch('/api/ignore/${r.id}',{method:'DELETE'}).then(loadIgnored)">恢复</button></div>`).join('')||'无黑名单'}async function loadLogs(){const box=$('logs');box.textContent=(await(await fetch('/api/logs')).json()).join('\n');box.scrollTop=0}async function clearLogs(){await fetch('/api/logs/clear',{method:'POST'});loadLogs()}
+
+    // ---- Delete queue ----
+    async function loadDeleteQueue(){try{const d=await(await fetch('/api/delete-queue')).json();const c=d.counts||{};const summary=Object.entries(c).map(([k,v])=>`<span class="tag ${k}">${k}: ${v}</span>`).join('');const items=(d.items||[]).map(r=>{const t=r.status;const time=r.finished_at||r.started_at||r.created_at;return `<div class="stat"><span><span class="tag ${t}">${t}</span> ${r.name||r.emby_id}${r.error?' · '+r.error:''}${r.retry_count?` · 重试${r.retry_count}`:''}</span><strong>${time?new Date(time*1000).toLocaleTimeString():''}</strong></div>`}).join('');$('delete_queue').innerHTML=summary+items||'队列为空'}catch{$('delete_queue').textContent='加载失败'}}
+    async function retryFailed(){const r=await fetch('/api/delete-queue/retry',{method:'POST'});const d=await r.json();note(`已重试 ${d.retried||0} 条`);loadDeleteQueue()}
+    async function clearDone(){const r=await fetch('/api/delete-queue/clear',{method:'POST'});const d=await r.json();note(`已清理 ${d.cleared||0} 条`);loadDeleteQueue()}
+
+    // ---- Tasks ----
+    async function loadTasks(){try{const tasks=await(await fetch('/api/tasks')).json();$('task_list').innerHTML=tasks.map(t=>`<div class="stat"><span><strong>${t.name}</strong><br><span class="muted mini">${t.mode} · ${t.cron} · ${t.enabled?'启用':'停用'} ${t.auto_delete?'· 自动删除':''}<br>${t.last_message||''}</span></span><span><button class="ghost mini" onclick="runTask(${t.id})">执行</button> <button class="ghost mini" onclick="editTask(${t.id})">编辑</button> <button class="danger mini" onclick="delTask(${t.id})">删</button></span></div>`).join('')||'<span class="muted">暂无定时任务</span>'}catch{$('task_list').innerHTML='加载失败'}}
+    function showTaskForm(t){$('task_form_panel').style.display='block';$('task_form_title').textContent='新建任务';state.taskEditId=null;$('task_name').value='';$('task_cron').value='0 4 * * *';$('task_libs').value='';$('task_auto_delete').checked=false;$('task_enabled').checked=true;$('task_mode').value='av'}
+    function hideTaskForm(){$('task_form_panel').style.display='none'}
+    function editTask(id){fetch('/api/tasks').then(r=>r.json()).then(tasks=>{const t=tasks.find(x=>x.id===id);if(!t)return;$('task_form_panel').style.display='block';$('task_form_title').textContent='编辑任务';state.taskEditId=id;$('task_name').value=t.name;$('task_cron').value=t.cron;$('task_libs').value=t.libraries;$('task_auto_delete').checked=!!t.auto_delete;$('task_enabled').checked=!!t.enabled;$('task_mode').value=t.mode})}
+    async function saveTask(){const payload={name:$('task_name').value,mode:$('task_mode').value,cron:$('task_cron').value,libraries:$('task_libs').value,auto_delete:$('task_auto_delete').checked,enabled:$('task_enabled').checked};const url=state.taskEditId?`/api/tasks/${state.taskEditId}`:'/api/tasks';const method=state.taskEditId?'PUT':'POST';const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(r.ok){hideTaskForm();loadTasks();note('任务已保存')}}
+    async function runTask(id){await fetch(`/api/tasks/${id}/run`,{method:'POST'});note('任务已触发执行')}
+    async function delTask(id){if(!confirm('确认删除此任务？'))return;await fetch(`/api/tasks/${id}`,{method:'DELETE'});loadTasks()}
+
+    // ---- Storage dashboard ----
+    async function loadStorage(render=true){if(!render)return;try{const s=await(await fetch('/api/status')).json();const stats=s.library_stats||[];const max=Math.max(...stats.map(x=>x.total_size),1);$('storage_list').innerHTML=stats.map(x=>{const pct=(x.total_size/max*100).toFixed(1);return `<div class="stat" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between"><span><strong>${x.library_name||x.library_id}</strong></span><strong>${bytes(x.total_size)}</strong></div><small class="muted">${x.item_count} 条 · 无封面 ${x.no_poster||0} · 无时长 ${x.no_duration||0}</small><div class="lib-bar"><div class="lib-bar-fill" style="width:${pct}%"></div></div></div>`}).join('')||'<span class="muted">暂无数据，请先同步</span>'}catch{$('storage_list').innerHTML='加载失败'}}
+
+    // ---- Ignore ----
+    async function loadIgnored(){const rows=await(await fetch('/api/ignore')).json();$('ignored').innerHTML=rows.map(r=>`<div class="stat"><span>${r.mode} · ${r.name||r.group_key||r.emby_id}</span><button class="ghost" onclick="fetch('/api/ignore/${r.id}',{method:'DELETE'}).then(loadIgnored)">恢复</button></div>`).join('')||'无黑名单'}
+
+    // ---- Logs ----
+    async function loadLogs(scroll=true){const box=$('logs');box.textContent=(await(await fetch('/api/logs')).json()).join('\n');if(scroll)box.scrollTop=0}async function clearLogs(){await fetch('/api/logs/clear',{method:'POST'});loadLogs()}
+
+    // ---- Init ----
     async function init(){renderModes();renderModeActions();await loadConfig();await loadLibraries();await poll()}setInterval(poll,3000);init();
   </script>
 </body>
