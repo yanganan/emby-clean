@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urljoin
 
 import httpx
@@ -64,6 +64,7 @@ class EmbyClient:
         username: str = "",
         password: str = "",
         auto_reauth: bool = True,
+        on_reauth: Callable[[str, str], None] | None = None,
     ):
         self.host = normalize_host(host)
         self.token = token
@@ -72,6 +73,7 @@ class EmbyClient:
         self._password = password
         self._auto_reauth = auto_reauth and bool(username)
         self._last_auth_ts: float = 0.0
+        self._on_reauth = on_reauth
 
     # ------------------------------------------------------------------
     #  Authentication
@@ -108,6 +110,11 @@ class EmbyClient:
         self.token = token
         self.user_id = user["Id"]
         self._last_auth_ts = time.time()
+        if self._on_reauth:
+            try:
+                self._on_reauth(token, user["Id"])
+            except Exception:
+                pass
         return EmbySession(
             host=self.host,
             user_id=user["Id"],
@@ -332,3 +339,7 @@ class EmbyClient:
             params["MediaTypes"] = media_types
         data = await self.get_json(f"/Users/{self.user_id}/Items", params)
         return data.get("Items", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+
+    def primary_image_url(self, item_id: str, max_height: int = 220) -> str:
+        """Return the full URL for an item's primary image."""
+        return f"{self.host}/Items/{item_id}/Images/Primary?maxHeight={max_height}&quality=85"

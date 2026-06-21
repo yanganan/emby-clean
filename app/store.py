@@ -61,6 +61,15 @@ def init_db() -> None:
               is_media integer default 0,
               provider_key text,
               tags text,
+              codec text,
+              container text,
+              bitrate integer default 0,
+              audio_codec text,
+              audio_channels integer default 0,
+              has_subtitle integer default 0,
+              subtitle_lang text,
+              frame_rate real default 0,
+              bit_depth integer default 0,
               raw_json text,
               updated_at integer
             );
@@ -133,6 +142,15 @@ def init_db() -> None:
         ensure_column(db, "media_items", "primary_image_tag", "text")
         ensure_column(db, "media_items", "image_url", "text")
         ensure_column(db, "media_items", "is_media", "integer default 0")
+        ensure_column(db, "media_items", "codec", "text")
+        ensure_column(db, "media_items", "container", "text")
+        ensure_column(db, "media_items", "bitrate", "integer default 0")
+        ensure_column(db, "media_items", "audio_codec", "text")
+        ensure_column(db, "media_items", "audio_channels", "integer default 0")
+        ensure_column(db, "media_items", "has_subtitle", "integer default 0")
+        ensure_column(db, "media_items", "subtitle_lang", "text")
+        ensure_column(db, "media_items", "frame_rate", "real default 0")
+        ensure_column(db, "media_items", "bit_depth", "integer default 0")
         ensure_column(db, "libraries", "api_count", "integer default 0")
         ensure_column(db, "delete_queue", "retry_count", "integer default 0")
         ensure_column(db, "tasks", "auto_delete", "integer not null default 0")
