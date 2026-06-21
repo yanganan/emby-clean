@@ -175,6 +175,16 @@ async def notify(title: str, text: str) -> None:
 #  Emby client factory
 # ---------------------------------------------------------------------------
 
+def _persist_token(token: str, user_id: str) -> None:
+    """Persist a re-authenticated token to DB (called from EmbyClient callback)."""
+    try:
+        with connect() as db:
+            set_config_value(db, "access_token", token)
+            set_config_value(db, "user_id", user_id)
+    except Exception:
+        pass
+
+
 def client_from_db() -> EmbyClient:
     with connect() as db:
         cfg = get_config(db, include_secret=True)
@@ -185,6 +195,7 @@ def client_from_db() -> EmbyClient:
         username=cfg.get("user", ""),
         password=cfg.get("pwd", ""),
         auto_reauth=True,
+        on_reauth=_persist_token,
     )
 
 
@@ -508,6 +519,7 @@ async def libs_g() -> list[dict[str, Any]]:
                 "ItemCount": r["item_count"],
                 "CachedCount": db_count_library(r["id"]),
                 "ApiCount": r["api_count"],
+                "ImageId": r["id"],
             }
             for r in cached
         ]
@@ -869,6 +881,34 @@ async def emby_image(item_id: str) -> Response:
             )
         if resp.status_code >= 400:
             raise HTTPException(resp.status_code, "image unavailable")
+        return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.get("/emby-lib-image/{item_id}")
+async def emby_lib_image(item_id: str) -> Response:
+    """Proxy library/collection primary images at larger size."""
+    client = client_from_db()
+    try:
+        async with httpx.AsyncClient(timeout=20) as http:
+            # Try Primary image first, then Backdrop as fallback
+            resp = await http.get(
+                f"{client.host}/Items/{item_id}/Images/Primary",
+                headers={"X-Emby-Token": client.token},
+                params={"maxHeight": 300, "quality": 80},
+            )
+            if resp.status_code >= 400:
+                # Fallback to Backdrop
+                resp = await http.get(
+                    f"{client.host}/Items/{item_id}/Images/Backdrop",
+                    headers={"X-Emby-Token": client.token},
+                    params={"maxHeight": 300, "quality": 80},
+                )
+            if resp.status_code >= 400:
+                raise HTTPException(resp.status_code, "image unavailable")
         return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/jpeg"))
     except HTTPException:
         raise

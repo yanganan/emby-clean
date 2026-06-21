@@ -38,6 +38,8 @@ def item_from_emby(
     path = raw.get("Path") or source.get("Path") or ""
     streams = raw.get("MediaStreams") or source.get("MediaStreams") or []
     video = next((s for s in streams if s.get("Type") == "Video"), {})
+    audio = next((s for s in streams if s.get("Type") == "Audio"), {})
+    subtitle = next((s for s in streams if s.get("Type") == "Subtitle"), None)
     size = int(source.get("Size") or raw.get("Size") or 0)
     runtime_ticks = int(raw.get("RunTimeTicks") or source.get("RunTimeTicks") or 0)
     duration_seconds = runtime_ticks / 10_000_000 if runtime_ticks else 0
@@ -75,6 +77,15 @@ def item_from_emby(
         "is_media": is_media,
         "provider_key": provider_key,
         "tags": json.dumps(tags, ensure_ascii=False),
+        "codec": video.get("Codec") or source.get("Codec") or "",
+        "container": source.get("Container") or "",
+        "bitrate": int(source.get("Bitrate") or 0),
+        "audio_codec": audio.get("Codec") or "",
+        "audio_channels": int(audio.get("Channels") or 0),
+        "has_subtitle": 1 if subtitle else 0,
+        "subtitle_lang": subtitle.get("Language") or "" if subtitle else "",
+        "frame_rate": float(video.get("RealFrameRate") or video.get("AverageFrameRate") or 0),
+        "bit_depth": int(video.get("BitDepth") or 0),
         "raw_json": json.dumps(raw, ensure_ascii=False),
         "updated_at": now_ts(),
     }
@@ -351,6 +362,7 @@ def decorate_item(item: dict[str, Any], mode: str) -> dict[str, Any]:
     item["duration"] = float(item.get("duration_seconds") or 0)
     item["display_path"] = str(Path(item.get("path") or "").parent) + "/" if item.get("path") else ""
     item["mode"] = mode
+    # Preserve media info fields for frontend display
     item.pop("raw_json", None)
     item.pop("tags", None)
     return item
