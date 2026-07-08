@@ -188,6 +188,11 @@
             <button class="ghost" onclick="testWebhook()">测试 Webhook</button>
             <button class="ghost" onclick="refreshLibrary()">刷新 Emby 库</button>
           </div>
+          <div class="row" style="margin-top:10px">
+            <button class="ghost" onclick="exportConfig()">导出配置</button>
+            <button class="ghost" onclick="document.getElementById('import-file').click()">导入配置</button>
+            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importConfig(this)">
+          </div>
         </div>
         <div class="panel">
           <h2>智能处理偏好</h2>
@@ -251,6 +256,8 @@
     async function saveConfig(){const payload={host:$('host').value,user:$('cfg_user').value,pwd:$('pwd').value,webhook:$('webhook').value,cron_sync:$('cron_sync').value,prefs:{av_keep_priority:$('pref_av').value,size_keep:$('pref_size').value,duration_keep:$('pref_duration').value,smart_keep:$('pref_smart').value,duration_scope:$('duration_scope').value,duration_precision:$('duration_precision').value,confirm_batch:'true',auto_refresh_library:$('pref_auto_refresh').checked,delete_retry_max:Number($('pref_retry').value||3)}};const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok){note(await r.text());return}$('pwd').value='';await init();note('配置已保存')}
     async function testWebhook(){const r=await fetch('/api/test_webhook',{method:'POST'});const d=await r.json();note(d.message||'已发送')}
     async function refreshLibrary(){await fetch('/api/refresh-library',{method:'POST'});note('Emby 全库刷新已触发')}
+    async function exportConfig(){const r=await fetch('/api/config/export');const d=await r.json();const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`emby-clean-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();note('配置已导出')}
+    async function importConfig(input){const file=input.files[0];if(!file)return;const text=await file.text();try{const payload=JSON.parse(text);const r=await fetch('/api/config/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(d.status==='ok'){note('配置导入成功！正在刷新...');setTimeout(()=>location.reload(),1500)}else{note(d.detail||'导入失败')}}catch(e){note('文件格式错误：'+e.message)}input.value=''}
 
     // ---- Libraries ----
     async function loadLibraries(){const box=$('libs');box.innerHTML='<span class="muted">加载中</span>';try{state.libraries=await(await fetch('/api/libraries')).json();box.innerHTML=state.libraries.map(x=>`<div class="lib-card ${state.libs.has(x.Id)?'active':''}" data-lib="${x.Id}" onclick="toggleLib('${x.Id}',this)"><img class="lib-card-img" src="/emby-lib-image/${x.Id}" loading="lazy" onerror="this.style.display='none'"><div class="lib-card-body"><strong>${x.Name}</strong><small class="muted">${x.CollectionType||''} · ${x.CachedCount??0}/${x.ItemCount??0} 条</small></div></div>`).join('')||'<span class="muted">无媒体库</span>'}catch{box.innerHTML='<span class="muted">请先保存 Emby 配置</span>'}}
