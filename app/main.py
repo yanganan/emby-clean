@@ -26,6 +26,11 @@ from .store import (
     set_stat,
     connect,
     DEFAULT_PREFS,
+    backup_config,
+    restore_config,
+    export_config,
+    import_config,
+    is_data_volume_mounted,
 )
 
 
@@ -87,6 +92,19 @@ class TaskReq(BaseModel):
 @app.on_event("startup")
 async def startup() -> None:
     init_db()
+
+    # Check if /data is a mounted volume — warn if not
+    if not is_data_volume_mounted():
+        log("WARNING", "⚠️ 数据目录未挂载持久卷！容器重建后数据将丢失。请使用 -v ./data:/data 挂载卷。")
+    else:
+        log("SYSTEM", "数据目录已挂载持久卷 ✓")
+
+    # Try to restore config from backup if DB is empty
+    if restore_config():
+        log("SYSTEM", "检测到空数据库，已从备份文件恢复配置。")
+    else:
+        log("SYSTEM", "配置检查完成。")
+
     with connect() as db:
         db.execute("update delete_queue set status='pending', error=NULL where status='running'")
         cron_sync = get_config(db).get("cron_sync", "")
@@ -497,7 +515,33 @@ async def cfg_post(req: ConfigRequest) -> dict[str, Any]:
         if req.prefs is not None:
             set_config_value(db, "prefs", req.prefs)
     configure_sync_schedule(req.cron_sync or "")
+    backup_config()  # auto-backup to JSON file
     log("CONFIG", "配置已保存")
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+#  Config backup / export / import
+# ---------------------------------------------------------------------------
+
+@app.get("/api/config/export")
+async def cfg_export() -> dict[str, Any]:
+    """Export all config + stats + tasks as JSON (for download/backup)."""
+    return export_config()
+
+
+@app.post("/api/config/import")
+async def cfg_import(payload: dict[str, Any]) -> dict[str, Any]:
+    """Import config from JSON payload. Overwrites existing config."""
+    success = import_config(payload)
+    if not success:
+        raise HTTPException(400, "导入失败：数据格式无效或缺少配置")
+    # Re-configure schedules after import
+    with connect() as db:
+        cron_sync = get_config(db).get("cron_sync", "")
+    configure_sync_schedule(cron_sync)
+    reload_task_schedules()
+    log("CONFIG", "配置已从导入文件恢复")
     return {"status": "ok"}
 
 

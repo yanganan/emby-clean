@@ -15,6 +15,7 @@ Emby Clean is a small Docker service for auditing and cleaning duplicate or low-
 
 ### v2.0 新增
 - **🔑 Token 自动续期**：access_token 过期后自动使用存储的密码重新认证，彻底解决重启后/过期后配置"丢失"问题。
+- **💾 配置自动备份与恢复**：每次保存配置时自动备份到 `/data/config_backup.json`；容器重建后数据库为空时自动从备份恢复。支持通过 API 手动导出/导入配置。
 - **📢 Webhook 实际通知**：同步完成、删除完成、定时任务执行时自动推送通知。
 - **⏰ 定时任务**：支持创建定时扫描任务，可开启「自动删除」模式自动清理推荐项。
 - **🔄 删除后自动刷新**：批量删除完成后自动触发 Emby 库扫描 (`/Library/Refresh`)。
@@ -90,10 +91,66 @@ services:
 
 The SQLite database is stored under `/data`.
 
+> **⚠️ 重要：更新镜像时务必保留卷挂载 (`-v ./data:/data`)，否则配置和数据会丢失！**
+
 You can also use the GitHub Container Registry image:
 
 ```yaml
 image: ghcr.io/yanganan/emby-clean:latest
+```
+
+## 更新 / 升级
+
+> **容器更新后配置丢失？** 这是因为重建容器时没有挂载数据卷。请按以下方法正确更新。
+
+### Docker Compose（推荐）
+
+```bash
+# 拉取最新镜像并重建容器（自动保留 ./data 卷挂载）
+docker compose pull
+docker compose up -d
+```
+
+### Docker Run
+
+```bash
+# 1. 停止旧容器
+docker stop emby-clean && docker rm emby-clean
+
+# 2. 拉取最新镜像
+docker pull xavieryy/emby-clean:latest
+
+# 3. 用相同的参数（包括 -v 卷挂载！）重新创建容器
+docker run -d \
+  --name emby-clean \
+  --restart unless-stopped \
+  -p 19898:19898 \
+  -e TZ=Asia/Shanghai \
+  -v "$PWD/data:/data" \
+  xavieryy/emby-clean:latest
+```
+
+### NAS Docker 管理界面（飞牛 NAS / 群晖等）
+
+1. **更新前**：在系统配置页点击「导出配置」按钮，保存 JSON 文件到本地。
+2. **更新镜像**：通过 NAS 界面拉取新镜像并重建容器。
+3. **确保卷挂载**：重建容器时务必添加 `-v /your/path/data:/data` 卷映射。
+4. **如果配置丢失**：访问新容器，在系统配置页点击「导入配置」，上传之前导出的 JSON 文件。
+
+### 配置备份与恢复
+
+系统会在每次保存配置时自动将配置备份到 `/data/config_backup.json`。如果容器重建后数据库为空，系统会自动尝试从备份文件恢复配置。
+
+你也可以通过 API 手动操作：
+
+```bash
+# 导出配置（包含 Emby 连接信息、偏好设置、定时任务）
+curl http://localhost:19898/api/config/export -o emby-clean-backup.json
+
+# 导入配置
+curl -X POST http://localhost:19898/api/config/import \
+  -H "Content-Type: application/json" \
+  -d @emby-clean-backup.json
 ```
 
 ## Images

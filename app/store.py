@@ -11,6 +11,11 @@ from typing import Any, Generator
 
 DATA_DIR = Path(os.getenv("EMBY_CLEAN_DATA", "./data")).resolve()
 DB_PATH = DATA_DIR / "emby_clean.db"
+BACKUP_PATH = DATA_DIR / "config_backup.json"
+
+# Config keys that are safe to backup/restore
+_BACKUP_CONFIG_KEYS = ["host", "user", "pwd", "access_token", "user_id", "webhook", "cron_sync", "prefs"]
+_BACKUP_STAT_KEYS = ["server_id", "server_name", "server_ver", "user_name", "cleaned_count", "saved_space"]
 
 
 DEFAULT_PREFS = {
@@ -250,3 +255,174 @@ def ensure_column(db: sqlite3.Connection, table: str, column: str, ddl: str) -> 
     rows = db.execute(f"pragma table_info({table})").fetchall()
     if column not in {r["name"] for r in rows}:
         db.execute(f"alter table {table} add column {column} {ddl}")
+
+
+# ---------------------------------------------------------------------------
+#  Config backup / restore (JSON file at DATA_DIR/config_backup.json)
+#  Purpose: survive DB loss when container is recreated without volume mount.
+#  The backup file lives in the same /data directory, so it persists as long
+#  as the volume is mounted.  It also gives users a portable export they can
+#  download and re-import after a fresh deployment.
+# ---------------------------------------------------------------------------
+
+def backup_config() -> bool:
+    """Export config + stats + tasks to BACKUP_PATH. Returns True on success."""
+    try:
+        with connect() as db:
+            payload: dict[str, Any] = {"version": 1, "exported_at": now_ts()}
+            # Config key-values
+            config: dict[str, Any] = {}
+            for key in _BACKUP_CONFIG_KEYS:
+                val = get_config_value(db, key)
+                if val is not None:
+                    config[key] = val
+            payload["config"] = config
+            # Stats
+            stats: dict[str, Any] = {}
+            for key in _BACKUP_STAT_KEYS:
+                val = get_stat(db, key)
+                if val is not None:
+                    stats[key] = val
+            payload["stats"] = stats
+            # Tasks
+            task_rows = db.execute("select * from tasks order by id").fetchall()
+            payload["tasks"] = [dict(r) for r in task_rows]
+        BACKUP_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        return True
+    except Exception:
+        return False
+
+
+def restore_config() -> bool:
+    """Import config from BACKUP_PATH if the DB has no config. Returns True on success."""
+    if not BACKUP_PATH.exists():
+        return False
+    try:
+        payload = json.loads(BACKUP_PATH.read_text(encoding="utf-8"))
+        config = payload.get("config", {})
+        if not config:
+            return False
+        with connect() as db:
+            # Only restore if DB has no host configured (fresh / data-lost)
+            existing_host = get_config_value(db, "host", "")
+            if existing_host:
+                return False  # DB already has config, don't overwrite
+            for key, val in config.items():
+                set_config_value(db, key, val)
+            # Restore stats
+            for key, val in payload.get("stats", {}).items():
+                set_stat(db, key, val)
+            # Restore tasks
+            for task in payload.get("tasks", []):
+                task.pop("id", None)  # let autoincrement assign new id
+                db.execute(
+                    """
+                    insert into tasks(name,mode,cron,libraries,enabled,auto_delete,
+                                      last_status,last_found,last_deleted,last_duration_ms,
+                                      last_message,updated_at)
+                    values(?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task.get("name", ""),
+                        task.get("mode", ""),
+                        task.get("cron", ""),
+                        task.get("libraries", ""),
+                        int(task.get("enabled", 1)),
+                        int(task.get("auto_delete", 0)),
+                        task.get("last_status"),
+                        int(task.get("last_found", 0)),
+                        int(task.get("last_deleted", 0)),
+                        int(task.get("last_duration_ms", 0)),
+                        task.get("last_message"),
+                        task.get("updated_at"),
+                    ),
+                )
+        return True
+    except Exception:
+        return False
+
+
+def export_config() -> dict[str, Any]:
+    """Export all config + stats + tasks as a dict (for API download)."""
+    with connect() as db:
+        config: dict[str, Any] = {}
+        for key in _BACKUP_CONFIG_KEYS:
+            val = get_config_value(db, key)
+            if val is not None:
+                config[key] = val
+        stats: dict[str, Any] = {}
+        for key in _BACKUP_STAT_KEYS:
+            val = get_stat(db, key)
+            if val is not None:
+                stats[key] = val
+        task_rows = db.execute("select * from tasks order by id").fetchall()
+        tasks = [dict(r) for r in task_rows]
+    return {
+        "version": 1,
+        "exported_at": now_ts(),
+        "config": config,
+        "stats": stats,
+        "tasks": tasks,
+    }
+
+
+def import_config(payload: dict[str, Any]) -> bool:
+    """Import config from a dict (from API upload). Returns True on success."""
+    try:
+        config = payload.get("config", {})
+        if not config:
+            return False
+        with connect() as db:
+            for key, val in config.items():
+                if key in _BACKUP_CONFIG_KEYS:
+                    set_config_value(db, key, val)
+            for key, val in payload.get("stats", {}).items():
+                if key in _BACKUP_STAT_KEYS:
+                    set_stat(db, key, val)
+            # Replace all tasks
+            db.execute("delete from tasks")
+            for task in payload.get("tasks", []):
+                task.pop("id", None)
+                db.execute(
+                    """
+                    insert into tasks(name,mode,cron,libraries,enabled,auto_delete,
+                                      last_status,last_found,last_deleted,last_duration_ms,
+                                      last_message,updated_at)
+                    values(?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task.get("name", ""),
+                        task.get("mode", ""),
+                        task.get("cron", ""),
+                        task.get("libraries", ""),
+                        int(task.get("enabled", 1)),
+                        int(task.get("auto_delete", 0)),
+                        task.get("last_status"),
+                        int(task.get("last_found", 0)),
+                        int(task.get("last_deleted", 0)),
+                        int(task.get("last_duration_ms", 0)),
+                        task.get("last_message"),
+                        task.get("updated_at"),
+                    ),
+                )
+        backup_config()  # update backup file
+        return True
+    except Exception:
+        return False
+
+
+def is_data_volume_mounted() -> bool:
+    """Check if DATA_DIR is a mounted volume (Linux only). Returns True if mounted or undeterminable."""
+    try:
+        mounts = Path("/proc/mounts").read_text(encoding="utf-8")
+        data_str = str(DATA_DIR)
+        for line in mounts.splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[1] == data_str:
+                return True
+        # Also check if any parent is a mount point (e.g. /data mounted, DATA_DIR is /data)
+        # This handles cases where DATA_DIR itself isn't directly in /proc/mounts
+        # but a parent directory is
+        return False
+    except Exception:
+        return True  # Can't determine, assume mounted (non-Linux or no /proc)
