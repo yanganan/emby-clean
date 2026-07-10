@@ -11,7 +11,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpine@3.x.x/dist/cdn.min.js"></script>
   <style>
-    /* ── CSS Custom Properties for theming ── */
     :root {
       color-scheme: dark;
       --glass-bg: rgba(18, 26, 43, 0.72);
@@ -54,7 +53,6 @@
       min-height: 100vh;
       -webkit-text-size-adjust: 100%;
     }
-    /* ── Glassmorphism card ── */
     .glass {
       background: var(--glass-bg);
       backdrop-filter: blur(16px) saturate(1.4);
@@ -68,11 +66,12 @@
       -webkit-backdrop-filter: blur(20px) saturate(1.5);
       border-bottom: 1px solid var(--glass-border);
     }
-    /* ── Sidebar scroll ── */
+    @media (prefers-color-scheme: light) {
+      .glass-strong { background: rgba(255, 255, 255, 0.82); }
+    }
     .sidebar-scroll::-webkit-scrollbar { width: 4px; }
     .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
     .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-    /* ── Utility overrides ── */
     input, select, textarea {
       background: rgba(7, 11, 20, 0.6);
       border: 1px solid var(--line);
@@ -88,22 +87,23 @@
       box-shadow: 0 0 0 3px var(--primary-glow);
     }
     select { cursor: pointer; }
-    /* ── Chip / Lib card ── */
+    @media (prefers-color-scheme: light) {
+      input, select, textarea { background: rgba(255, 255, 255, 0.8); }
+    }
     .chip-off { border-color: var(--line); }
     .chip-on { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow) inset; }
-    /* ── Group / Item ── */
     .group-card { border: 1px solid var(--line); border-radius: 0.75rem; overflow: hidden; margin-bottom: 0.875rem; background: rgba(0,0,0,0.10); }
+    @media (prefers-color-scheme: light) { .group-card { background: rgba(0,0,0,0.02); } }
     .item-row { display: grid; grid-template-columns: auto 76px 1fr auto; gap: 0.75rem; padding: 0.75rem 0.875rem; border-top: 1px solid rgba(255,255,255,0.06); align-items: center; }
+    @media (prefers-color-scheme: light) { .item-row { border-top-color: rgba(0,0,0,0.06); } }
     .item-review { background: rgba(255,209,102,0.06); border-left: 3px solid var(--warn); }
     .item-delete { background: rgba(251,91,117,0.04); }
-    .item-row .poster { width: 76px; height: 112px; border-radius: 0.5rem; object-fit: cover; background: #050811; border: 1px solid var(--line); }
-    .item-row .no-poster { display: flex; align-items: center; justify-content: center; color: var(--warn); font-size: 0.75rem; text-align: center; }
-    /* ── Filter bar ── */
+    .poster { width: 76px; height: 112px; border-radius: 0.5rem; object-fit: cover; background: #050811; border: 1px solid var(--line); }
+    .no-poster { display: flex; align-items: center; justify-content: center; color: var(--warn); font-size: 0.75rem; text-align: center; }
     .filter-btn { padding: 0.375rem 0.75rem; border-radius: 0.375rem; border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--text-muted); cursor: pointer; font-size: 0.8125rem; font-weight: 700; transition: all 0.15s; }
     .filter-btn:hover { border-color: var(--primary); color: var(--text); }
     .filter-btn.active { background: var(--primary); color: #06111e; border-color: var(--primary); }
     .filter-btn .ct { margin-left: 0.25rem; opacity: 0.7; font-weight: 900; }
-    /* ── Badge / Tag ── */
     .badge { border-radius: 999px; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 600; border: 1px solid var(--line); color: var(--text-muted); }
     .badge.delete { color: #ff9bad; border-color: rgba(251,91,117,0.45); }
     .badge.keep { color: #76e6b7; border-color: rgba(55,217,158,0.45); }
@@ -114,59 +114,38 @@
     .tag-pill.running { background: rgba(255,209,102,0.15); color: #ffd166; }
     .tag-pill.failed { background: rgba(251,91,117,0.15); color: #fb5b75; }
     .tag-pill.done { background: rgba(55,217,158,0.15); color: #37d99e; }
-    /* ── Progress bar ── */
     .prog-bar { background: rgba(255,255,255,0.06); border-radius: 4px; height: 8px; overflow: hidden; }
     .prog-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); transition: width 0.4s ease; border-radius: 4px; }
-    /* ── Log viewer ── */
     .log-viewer { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; background: rgba(5, 8, 17, 0.7); border: 1px solid var(--line); border-radius: 0.75rem; padding: 1rem; min-height: 420px; max-height: 65vh; overflow-y: auto; font-size: 0.8125rem; line-height: 1.5; }
+    @media (prefers-color-scheme: light) { .log-viewer { background: rgba(248, 250, 252, 0.8); } }
     .log-viewer::-webkit-scrollbar { width: 4px; }
     .log-viewer::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-    /* ── Info grid ── */
     .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1px 8px; margin-top: 0.25rem; }
     .info-grid .info-item { font-size: 0.6875rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.125rem; }
-    /* ── Toast ── */
     .toast-enter { animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .toast-exit { animation: toastOut 0.25s ease-in forwards; }
-    @keyframes toastIn {
-      0% { opacity: 0; transform: translateY(-16px) scale(0.95); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    @keyframes toastOut {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-12px) scale(0.95); }
-    }
-    /* ── Page transitions ── */
+    @keyframes toastIn { 0% { opacity: 0; transform: translateY(-16px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     .page-enter { animation: pageFadeIn 0.3s ease-out; }
-    @keyframes pageFadeIn {
-      0% { opacity: 0; transform: translateY(8px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-    /* ── Spinner ── */
+    @keyframes pageFadeIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
     .spinner { display: inline-block; width: 1.25rem; height: 1.25rem; border: 2px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    /* ── Lib card ── */
     .lib-card { border: 1px solid var(--line); border-radius: 0.75rem; overflow: hidden; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; background: rgba(255,255,255,0.02); }
     .lib-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow) inset; }
     .lib-card-img { width: 100%; height: 80px; object-fit: cover; background: #050811; display: block; }
-    /* ── Skeleton ── */
     .skeleton { background: linear-gradient(90deg, var(--line) 25%, rgba(255,255,255,0.06) 50%, var(--line) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 0.375rem; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    /* ── Responsive ── */
     @media (max-width: 768px) {
       .item-row { grid-template-columns: auto 60px minmax(0, 1fr); gap: 0.625rem; }
-      .item-row .poster { width: 60px; height: 90px; }
-      .item-row > .row:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-      .item-row > .row:last-child button { width: 100%; }
+      .poster { width: 60px; height: 90px; }
+      .item-row > div:last-child > div { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
       .lib-card-img { height: 60px; }
       .info-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
       .log-viewer { min-height: 50vh; max-height: 60vh; }
     }
     @media (max-width: 480px) {
       .item-row { grid-template-columns: 28px 68px minmax(0, 1fr); padding: 0.625rem; }
-      .item-row .poster { width: 68px; height: 98px; }
+      .poster { width: 68px; height: 98px; }
       input[type="checkbox"] { width: 20px; height: 20px; }
     }
-    /* ── Scrollbar for main ── */
     .main-scroll::-webkit-scrollbar { width: 6px; }
     .main-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
     .main-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -174,10 +153,10 @@
 </head>
 <body>
   <div x-data="app()" x-init="init()" class="flex min-h-screen" :class="{ 'overflow-hidden': sidebarOpen }">
-    <!-- ─── TOAST CONTAINER ─── -->
+    <!-- TOAST -->
     <div class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:380px">
-      <template x-for="(toast, idx) in toasts" :key="toast.id">
-        <div x-show="toast.showing" 
+      <template x-for="toast in toasts" :key="toast.id">
+        <div x-show="toast.showing"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0 translate-x-8"
              x-transition:enter-end="opacity-100 translate-x-0"
@@ -186,51 +165,33 @@
              x-transition:leave-end="opacity-0 translate-x-8"
              class="pointer-events-auto rounded-xl p-4 shadow-2xl border backdrop-blur-md flex items-start gap-3"
              :class="toastClasses(toast.type)">
-          <template x-if="toast.type === 'success'">
-            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-          </template>
-          <template x-if="toast.type === 'error'">
-            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </template>
-          <template x-if="toast.type === 'warning'">
-            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--warn)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 2l10 18H2L12 2z"/></svg>
-          </template>
-          <template x-if="toast.type === 'info' || toast.type === 'loading'">
-            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20 10 10 0 010-20z"/></svg>
-          </template>
           <div class="flex-1 min-w-0">
-            <p x-text="toast.message" class="text-sm font-medium leading-snug" :class="toast.type==='success'?'text-[var(--success)]':toast.type==='error'?'text-[var(--danger)]':toast.type==='warning'?'text-[var(--warn)]':'text-[var(--text)]'"></p>
+            <p x-text="toast.message" class="text-sm font-medium leading-snug"></p>
           </div>
-          <button @click="removeToast(idx)" class="text-[var(--text-muted)] hover:text-[var(--text)] shrink-0 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
+          <button @click="removeToast(toast.id)" class="text-[var(--text-muted)] hover:text-[var(--text)] shrink-0 transition-colors text-lg leading-none">&times;</button>
         </div>
       </template>
     </div>
 
-    <!-- ─── MOBILE HAMBURGER ─── -->
+    <!-- MOBILE HEADER -->
     <div class="fixed top-0 left-0 right-0 z-30 glass-strong px-4 py-3 flex items-center justify-between md:hidden">
       <div class="text-lg font-black tracking-tight">Emby<span class="text-[var(--primary)]">Clean</span></div>
       <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg hover:bg-[var(--line)] transition-colors">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path x-show="!sidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-          <path x-show="sidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
       </button>
     </div>
 
-    <!-- ─── OVERLAY (mobile) ─── -->
-    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm md:hidden" x-transition:enter="transition-opacity duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
+    <!-- OVERLAY -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm md:hidden" x-transition.opacity></div>
 
-    <!-- ─── SIDEBAR ─── -->
+    <!-- SIDEBAR -->
     <aside class="glass-strong sidebar-scroll fixed md:sticky top-0 left-0 z-20 h-full w-72 shrink-0 flex flex-col pt-16 md:pt-0 transition-transform duration-300 md:translate-x-0"
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
-      <!-- Brand -->
       <div class="px-6 pt-6 pb-2 hidden md:block">
         <div class="text-2xl font-black tracking-tight">Emby<span class="text-[var(--primary)]">Clean</span></div>
       </div>
-
-      <!-- Status Panel -->
       <div class="glass mx-4 mt-4 rounded-xl p-4 space-y-2 text-sm">
         <div class="flex justify-between"><span class="text-[var(--text-muted)]">服务器</span><strong x-text="status.server_name || '-'" class="font-semibold"></strong></div>
         <div class="flex justify-between"><span class="text-[var(--text-muted)]">版本</span><strong x-text="status.server_ver || '-'" class="font-semibold"></strong></div>
@@ -245,31 +206,30 @@
           <span x-show="!status.connected" class="text-[var(--text-muted)] font-semibold text-xs">连接状态检测中</span>
         </div>
         <div x-text="syncDetailText" class="text-xs text-[var(--text-muted)] leading-tight"></div>
-        <button @click="syncNow" class="w-full rounded-lg py-2 px-3 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all mt-1">立即同步元数据</button>
+        <button @click="syncNow" :disabled="status.is_syncing" class="w-full rounded-lg py-2 px-3 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 mt-1">
+          <span x-show="status.is_syncing">同步中...</span>
+          <span x-show="!status.is_syncing">立即同步元数据</span>
+        </button>
       </div>
-
-      <!-- Navigation -->
       <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto sidebar-scroll">
         <template x-for="item in navItems" :key="item.id">
           <button @click="navigate(item.id)"
                   class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
-                  :class="activePage === item.id ? 'bg-[var(--primary)] text-[#06111e] shadow-lg shadow-[var(--primary-glow)]' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--line)]'">
+                  :class="activePage === item.id ? 'bg-[var(--primary)] text-[#06111e] shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--line)]'">
             <span x-text="item.icon" class="text-lg"></span>
             <span x-text="item.label"></span>
           </button>
         </template>
       </nav>
-
       <div class="px-4 pb-4 text-xs text-[var(--text-muted)]">v2.0 · 不建议映射公网</div>
     </aside>
 
-    <!-- ─── MAIN CONTENT ─── -->
+    <!-- MAIN -->
     <main class="flex-1 main-scroll pt-16 md:pt-0 overflow-y-auto min-h-screen" style="height:100vh">
-      <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6 pb-28 md:pb-6 space-y-5">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6 pb-28 md:pb-6 space-y-5" x-ref="mainContent">
 
-        <!-- ══════ SCAN PAGE ══════ -->
-        <div x-show="activePage === 'scan'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-5">
-          <!-- Library Selection -->
+        <!-- ═══ SCAN PAGE ═══ -->
+        <div x-show="activePage === 'scan'" class="page-enter space-y-5">
           <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-bold">1. 选择媒体库</h2>
@@ -282,19 +242,17 @@
             </div>
             <div x-show="!loading.libraries" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               <template x-for="lib in libraries" :key="lib.Id">
-                <div class="lib-card" :class="{ active: selectedLibs.has(lib.Id) }" @click="toggleLib(lib.Id)">
-                  <img class="lib-card-img" :src="'/emby-lib-image/' + encodeURIComponent(lib.Id)" loading="lazy" @error.once="$el.style.display='none'">
+                <div class="lib-card" :class="{ active: selectedLibs.includes(lib.Id) }" @click="toggleLib(lib.Id)">
+                  <img class="lib-card-img" :src="'/emby-lib-image/' + encodeURIComponent(lib.Id)" loading="lazy" @error="$el.style.display='none'">
                   <div class="p-3">
                     <div class="font-semibold text-sm truncate" x-text="lib.Name"></div>
-                    <div class="text-xs text-[var(--text-muted)] mt-0.5 truncate" x-text="(lib.CollectionType || '') + ' · ' + (lib.CachedCount ?? 0) + '/' + (lib.ItemCount ?? 0) + ' 条'"></div>
+                    <div class="text-xs text-[var(--text-muted)] mt-0.5" x-text="(lib.CollectionType || '') + ' · ' + (lib.CachedCount ?? 0) + '/' + (lib.ItemCount ?? 0) + ' 条'"></div>
                   </div>
                 </div>
               </template>
               <div x-show="!libraries.length && !loading.libraries" class="col-span-full text-sm text-[var(--text-muted)] py-4 text-center">无媒体库 — 请先在「配置」页保存 Emby 信息</div>
             </div>
           </div>
-
-          <!-- Scan Mode -->
           <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold">2. 扫描模式</h2>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -306,32 +264,10 @@
               </template>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">极小文件 MB</label>
-                <input type="number" x-model="scanParams.param_s" class="text-sm">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长范围</label>
-                <select x-model="scanParams.duration_scope" class="text-sm">
-                  <option value="dir">同目录</option>
-                  <option value="library">全库</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长精度</label>
-                <select x-model="scanParams.duration_precision" class="text-sm">
-                  <option value="second">整秒</option>
-                  <option value="centisecond">百分秒</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">每页处理</label>
-                <select x-model.number="scanParams.page_size" class="text-sm">
-                  <option>50</option>
-                  <option selected>100</option>
-                  <option>200</option>
-                </select>
-              </div>
+              <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">极小文件 MB</label><input type="number" x-model="scanParams.param_s" class="text-sm"></div>
+              <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长范围</label><select x-model="scanParams.duration_scope" class="text-sm"><option value="dir">同目录</option><option value="library">全库</option></select></div>
+              <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长精度</label><select x-model="scanParams.duration_precision" class="text-sm"><option value="second">整秒</option><option value="centisecond">百分秒</option></select></div>
+              <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">每页处理</label><select x-model.number="scanParams.page_size" class="text-sm"><option :value="50">50</option><option :value="100">100</option><option :value="200">200</option></select></div>
             </div>
             <div class="flex items-center gap-4 pt-1">
               <button @click="startScan" :disabled="loading.scan" class="rounded-xl py-2.5 px-6 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
@@ -343,52 +279,53 @@
           </div>
         </div>
 
-        <!-- ══════ RESULTS PAGE ══════ -->
-        <div x-show="activePage === 'results'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-4">
-          <!-- Sticky toolbar -->
-          <div class="glass rounded-xl p-4 sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6">
+        <!-- ═══ RESULTS PAGE ═══ -->
+        <div x-show="activePage === 'results'" class="page-enter space-y-4">
+          <div class="glass rounded-xl p-4 sticky top-0 z-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <strong class="text-sm md:text-base" x-text="resultTitle"></strong>
-                <div class="text-xs text-[var(--text-muted)]" x-html="resultMeta"></div>
+                <div class="text-xs text-[var(--text-muted)] mt-0.5">
+                  第 <span x-text="resultPage"></span> / <span x-text="pageCount()"></span> 页 · 本页 <span x-text="visibleFiltered().length"></span> 条 · 已选 <span x-text="selectedVisibleIds().length"></span> 条
+                  <template x-if="reviewCount > 0"><span class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold" style="background:rgba(255,209,102,0.15);color:var(--warn)">⚠ <span x-text="reviewCount"></span> 待确认</span></template>
+                </div>
               </div>
               <div class="flex flex-wrap gap-2">
-                <button @click="navigate('scan')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">返回扫描</button>
-                <button @click="prevPage" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">上一页</button>
-                <button @click="nextPage" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">下一页</button>
-                <button @click="deleteSelected" class="rounded-lg px-3 py-1.5 text-xs font-bold bg-[var(--danger)] text-white hover:brightness-110 transition-all">队列删除选中</button>
+                <button @click="navigate('scan')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">返回</button>
+                <button @click="prevPage()" :disabled="resultPage <= 1" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all disabled:opacity-30">上一页</button>
+                <button @click="nextPage()" :disabled="resultPage >= pageCount()" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all disabled:opacity-30">下一页</button>
+                <button @click="deleteSelected" class="rounded-lg px-3 py-1.5 text-xs font-bold bg-[var(--danger)] text-white hover:brightness-110 transition-all">删除选中</button>
               </div>
             </div>
-            <!-- More actions (collapsible) -->
             <details class="mt-2 group">
               <summary class="text-xs text-[var(--text-muted)] font-bold cursor-pointer py-1 list-none flex items-center gap-1 hover:text-[var(--text)] transition-colors">
                 <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                更多选择操作
+                更多操作
               </summary>
               <div class="flex flex-wrap gap-2 mt-2">
-                <button @click="selectRecommendedPage" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">本页推荐</button>
-                <button @click="toggleVisiblePage(true)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">本页全选</button>
-                <button @click="toggleVisiblePage(false)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">本页全不选</button>
-                <button @click="ignoreSelected" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">忽略选中</button>
+                <button @click="selectRecommendedPage()" class="filter-btn">本页推荐</button>
+                <button @click="toggleVisiblePage(true)" class="filter-btn">本页全选</button>
+                <button @click="toggleVisiblePage(false)" class="filter-btn">全不选</button>
+                <button @click="ignoreSelected()" class="filter-btn">忽略选中</button>
                 <template x-if="scanMode === 'av'">
-                  <>
-                    <button @click="selectByTag('tag_c')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">选 [C]</button>
-                    <button @click="selectByTag('tag_crack')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">选破解</button>
-                    <button @click="selectByTag('tag_leak')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">只看/选流出</button>
-                    <button @click="selectByTag('tag_raw')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">选无标签</button>
-                  </>
+                  <div class="flex flex-wrap gap-2">
+                    <button @click="selectByTag('tag_c')" class="filter-btn">选 [C]</button>
+                    <button @click="selectByTag('tag_crack')" class="filter-btn">选破解</button>
+                    <button @click="selectByTag('tag_leak')" class="filter-btn">选流出</button>
+                    <button @click="selectByTag('tag_raw')" class="filter-btn">选无标签</button>
+                  </div>
                 </template>
                 <template x-if="scanMode === 'smart'">
-                  <>
-                    <button @click="selectResolution(true)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最高分辨率</button>
-                    <button @click="selectResolution(false)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最低分辨率</button>
-                  </>
+                  <div class="flex flex-wrap gap-2">
+                    <button @click="selectResolution(true)" class="filter-btn">保留最高分辨率</button>
+                    <button @click="selectResolution(false)" class="filter-btn">保留最低分辨率</button>
+                  </div>
                 </template>
                 <template x-if="scanMode === 'duration'">
-                  <>
-                    <button @click="selectBySize(false)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最小文件</button>
-                    <button @click="selectBySize(true)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最大文件</button>
-                  </>
+                  <div class="flex flex-wrap gap-2">
+                    <button @click="selectBySize(false)" class="filter-btn">保留最小文件</button>
+                    <button @click="selectBySize(true)" class="filter-btn">保留最大文件</button>
+                  </div>
                 </template>
               </div>
             </details>
@@ -400,13 +337,13 @@
           <!-- Filter bar -->
           <div x-show="flatItems.length" class="flex flex-wrap gap-2">
             <template x-for="f in filterOptions" :key="f.key">
-              <button @click="currentFilter = f.key" class="filter-btn text-xs" :class="{ active: currentFilter === f.key }">
+              <button @click="currentFilter = f.key" class="filter-btn" :class="{ active: currentFilter === f.key }">
                 <span x-text="f.label"></span><span class="ct" x-text="f.count"></span>
               </button>
             </template>
           </div>
 
-          <!-- Results list -->
+          <!-- Results -->
           <div x-show="flatItems.length" class="space-y-3">
             <template x-for="(group, gidx) in paginatedGroups" :key="gidx">
               <div class="group-card">
@@ -416,14 +353,14 @@
                 </div>
                 <template x-for="item in group.items" :key="item.emby_id">
                   <div class="item-row" :class="item.recommend_action === 'review' ? 'item-review' : (item.recommend_action === 'delete' ? 'item-delete' : '')">
-                    <input type="checkbox" :checked="selectedIds.has(item.emby_id)" @change="toggleItem(item.emby_id, $event.target.checked)" class="rounded border-[var(--line)] bg-transparent accent-[var(--primary)]">
-                    <img x-show="item.image_url" :src="item.image_url" loading="lazy" class="poster" @error.once="$el.outerHTML = '<div class=\\'poster no-poster\\'>缺失封面</div>'">
-                    <div x-show="!item.image_url" class="poster no-poster">缺失封面</div>
+                    <input type="checkbox" :checked="selectedIds.includes(item.emby_id)" @change="toggleItem(item.emby_id, $event.target.checked)" class="rounded border-[var(--line)] bg-transparent accent-[var(--primary)]" style="width:18px;height:18px">
+                    <template x-if="item.image_url"><img :src="item.image_url" loading="lazy" class="poster" @error="$el.src=''; $el.style.display='none'; $el.nextElementSibling.style.display='flex'"></template>
+                    <div x-show="!item.image_url" class="poster no-poster" style="display:none">缺失封面</div>
                     <div class="min-w-0">
                       <div class="flex flex-wrap items-center gap-1.5">
-                        <strong class="text-sm" x-text="item.name || item.emby_id" class="truncate"></strong>
-                        <span class="badge" :class="item.recommend_action || 'delete'" x-text="item.recommend_action || '命中'"></span>
-                        <span class="badge rank text-xs"><span x-text="tagText(item)"></span> · 优先级 <span x-text="item.version_rank ?? 0"></span></span>
+                        <strong class="text-sm truncate" x-text="item.name || item.emby_id"></strong>
+                        <span class="badge" :class="item.recommend_action || ''" x-text="item.recommend_action || '命中'"></span>
+                        <span class="badge rank text-xs"><span x-text="tagText(item)"></span> · <span x-text="item.version_rank ?? 0"></span></span>
                       </div>
                       <div class="info-grid">
                         <span class="info-item" x-text="bytes(item.size)"></span>
@@ -435,12 +372,11 @@
                         <span x-show="item.bitrate" class="info-item" x-text="Math.round(item.bitrate/1000) + 'kbps'"></span>
                         <span x-show="item.frame_rate" class="info-item" x-text="item.frame_rate?.toFixed(1) + 'fps'"></span>
                         <span x-show="item.bit_depth" class="info-item" x-text="item.bit_depth + 'bit'"></span>
-                        <span x-show="item.has_subtitle !== undefined" class="info-item" x-text="item.has_subtitle ? '字幕' : '无字幕'"></span>
                       </div>
                       <div x-text="item.path || ''" class="text-xs text-[var(--text-muted)] truncate mt-0.5"></div>
                       <div x-show="item.recommend_reason" x-text="item.recommend_reason" class="text-xs text-[var(--text-muted)] mt-0.5"></div>
                     </div>
-                    <div class="flex gap-2 shrink-0 flex-wrap items-start">
+                    <div class="flex gap-2 shrink-0">
                       <button @click="ignoreOne(item.emby_id)" class="rounded-lg px-2.5 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">忽略</button>
                       <button @click="deleteOne(item.emby_id)" class="rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[var(--danger)] text-white hover:brightness-110 transition-all">删除</button>
                       <button @click="openEmby(item.emby_id)" class="rounded-lg px-2.5 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">打开</button>
@@ -452,14 +388,12 @@
           </div>
         </div>
 
-        <!-- ══════ TASKS PAGE ══════ -->
-        <div x-show="activePage === 'tasks'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-5">
+        <!-- ═══ TASKS PAGE ═══ -->
+        <div x-show="activePage === 'tasks'" class="page-enter space-y-5">
           <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold">定时任务</h2>
             <p class="text-xs text-[var(--text-muted)]">定时执行同步 + 扫描。开启「自动删除」后，扫描命中的推荐删除项会自动入队。</p>
-            <div x-show="loading.tasks" class="space-y-2">
-              <template x-for="i in 3" :key="i"><div class="skeleton h-12 w-full"></div></template>
-            </div>
+            <div x-show="loading.tasks" class="space-y-2"><template x-for="i in 3" :key="i"><div class="skeleton h-12 w-full"></div></template></div>
             <div x-show="!loading.tasks" class="space-y-2">
               <template x-for="t in tasks" :key="t.id">
                 <div class="flex items-center justify-between py-2.5 border-b border-[var(--line)] last:border-0">
@@ -468,7 +402,7 @@
                     <div class="text-xs text-[var(--text-muted)]">
                       <span x-text="t.mode"></span> · <span x-text="t.cron"></span> · <span x-text="t.enabled ? '启用' : '停用'"></span>
                       <span x-show="t.auto_delete"> · 自动删除</span>
-                      <span x-show="t.last_message" class="block truncate" x-text="t.last_message"></span>
+                      <template x-if="t.last_message"><span class="block truncate" x-text="t.last_message"></span></template>
                     </div>
                   </div>
                   <div class="flex gap-1.5 shrink-0 ml-3">
@@ -482,83 +416,36 @@
             </div>
             <button @click="showTaskForm()" class="w-full rounded-xl py-2.5 text-sm font-bold border border-dashed border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">+ 新建任务</button>
           </div>
-
-          <!-- Task form -->
-          <div x-show="taskFormOpen" class="glass rounded-2xl p-5 md:p-6 space-y-4 transition-all">
+          <div x-show="taskFormOpen" class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold" x-text="taskEditId ? '编辑任务' : '新建任务'"></h2>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">任务名称</label>
-              <input x-model="taskForm.name" placeholder="每日 AV 查重" class="text-sm">
-            </div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">任务名称</label><input x-model="taskForm.name" placeholder="每日 AV 查重" class="text-sm"></div>
             <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">扫描模式</label>
-                <select x-model="taskForm.mode" class="text-sm">
-                  <template x-for="[id, label] in modes" :key="id">
-                    <option :value="id" x-text="label"></option>
-                  </template>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Cron 表达式</label>
-                <input x-model="taskForm.cron" placeholder="0 4 * * *" class="text-sm">
-              </div>
+              <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">扫描模式</label><select x-model="taskForm.mode" class="text-sm"><template x-for="[id, label] in modes" :key="id"><option :value="id" x-text="label"></option></template></select></div>
+              <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Cron 表达式</label><input x-model="taskForm.cron" placeholder="0 4 * * *" class="text-sm"></div>
             </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">媒体库 (逗号分隔，留空为全部)</label>
-              <input x-model="taskForm.libraries" placeholder="留空全部" class="text-sm">
-            </div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">媒体库 (逗号分隔，留空为全部)</label><input x-model="taskForm.libraries" placeholder="留空全部" class="text-sm"></div>
             <div class="flex items-center gap-6">
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" x-model="taskForm.auto_delete" class="rounded border-[var(--line)] accent-[var(--primary)]" style="width:auto;min-height:auto">
-                <span>自动删除推荐项</span>
-              </label>
-              <label class="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" x-model="taskForm.enabled" class="rounded border-[var(--line)] accent-[var(--primary)]" style="width:auto;min-height:auto">
-                <span>启用</span>
-              </label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" x-model="taskForm.auto_delete" style="width:auto;min-height:auto" class="accent-[var(--primary)]"><span>自动删除推荐项</span></label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" x-model="taskForm.enabled" style="width:auto;min-height:auto" class="accent-[var(--primary)]"><span>启用</span></label>
             </div>
             <div class="flex gap-3 pt-1">
-              <button @click="saveTask" :disabled="loading.saveTask" class="rounded-xl py-2.5 px-5 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2">
-                <span x-show="loading.saveTask" class="spinner"></span>
-                <span>保存任务</span>
-              </button>
+              <button @click="saveTask" :disabled="loading.saveTask" class="rounded-xl py-2.5 px-5 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2"><span x-show="loading.saveTask" class="spinner"></span><span>保存任务</span></button>
               <button @click="taskFormOpen = false" class="rounded-xl py-2.5 px-5 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">取消</button>
             </div>
           </div>
         </div>
 
-        <!-- ══════ SETTINGS PAGE ══════ -->
-        <div x-show="activePage === 'settings'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter grid md:grid-cols-2 gap-5">
-          <!-- Emby Config -->
+        <!-- ═══ SETTINGS PAGE ═══ -->
+        <div x-show="activePage === 'settings'" class="page-enter grid md:grid-cols-2 gap-5">
           <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold">媒体库配置</h2>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Emby 地址</label>
-              <input x-model="form.host" placeholder="http://ip:8096" class="text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">用户名</label>
-              <input x-model="form.user" class="text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">密码</label>
-              <input type="password" x-model="form.pwd" class="text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">通知 Webhook</label>
-              <input x-model="form.webhook" class="text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">自动同步元数据 Cron</label>
-              <input x-model="form.cron_sync" placeholder="0 4 * * *" class="text-sm">
-              <p class="text-xs text-[var(--text-muted)] mt-1">留空为关闭；示例：<code class="text-[var(--primary)]">0 4 * * *</code> 表示每天 04:00 自动同步。Token 过期后会自动使用存储的密码重新认证。</p>
-            </div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Emby 地址</label><input x-model="form.host" placeholder="http://ip:8096" class="text-sm"></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">用户名</label><input x-model="form.user" class="text-sm"></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">密码</label><input type="password" x-model="form.pwd" class="text-sm"></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">通知 Webhook</label><input x-model="form.webhook" class="text-sm"></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">自动同步元数据 Cron</label><input x-model="form.cron_sync" placeholder="0 4 * * *" class="text-sm"><p class="text-xs text-[var(--text-muted)] mt-1">留空为关闭；示例：<code class="text-[var(--primary)]">0 4 * * *</code> 表示每天 04:00。Token 过期后会自动重新认证。</p></div>
             <div class="flex flex-wrap gap-2 pt-1">
-              <button @click="saveConfig" :disabled="loading.saveConfig" class="rounded-xl py-2 px-4 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2">
-                <span x-show="loading.saveConfig" class="spinner"></span>
-                <span>保存配置</span>
-              </button>
+              <button @click="saveConfig" :disabled="loading.saveConfig" class="rounded-xl py-2 px-4 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2"><span x-show="loading.saveConfig" class="spinner"></span><span>保存配置</span></button>
               <button @click="testWebhook" class="rounded-xl py-2 px-4 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">测试 Webhook</button>
               <button @click="refreshLibrary" class="rounded-xl py-2 px-4 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">刷新 Emby 库</button>
             </div>
@@ -568,64 +455,24 @@
               <input type="file" accept=".json" x-ref="importFile" @change="importConfig" class="hidden">
             </div>
           </div>
-
-          <!-- Preferences -->
           <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold">智能处理偏好</h2>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">番号推荐规则</label>
-              <select x-model="prefs.av_keep_priority" class="text-sm">
-                <option value="rank">破解-C > C > 破解 > 无标签；流出人工确认</option>
-                <option value="tag_uc">选 [UC]</option>
-                <option value="tag_c">选 [C]</option>
-                <option value="tag_raw">选原版</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">同大推荐规则</label>
-              <select x-model="prefs.size_keep" class="text-sm">
-                <option value="path_long">最长路径</option>
-                <option value="path_short">最短路径</option>
-                <option value="name_long">最长名称</option>
-                <option value="name_short">最短名称</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长推荐规则</label>
-              <select x-model="prefs.duration_keep" class="text-sm">
-                <option value="min">选最小文件</option>
-                <option value="max">选最大文件</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">洗版推荐规则</label>
-              <select x-model="prefs.smart_keep" class="text-sm">
-                <option value="reso_max">最高分辨率</option>
-                <option value="reso_min">最低分辨率</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">删除失败自动重试次数</label>
-              <input type="number" x-model.number="prefs.delete_retry_max" min="0" max="10" class="text-sm">
-            </div>
-            <label class="flex items-center gap-2 text-sm cursor-pointer pt-1">
-              <input type="checkbox" x-model="prefs.auto_refresh_library" class="rounded border-[var(--line)] accent-[var(--primary)]" style="width:auto;min-height:auto">
-              <span>删除后自动刷新 Emby 媒体库</span>
-            </label>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">番号推荐规则</label><select x-model="prefs.av_keep_priority" class="text-sm"><option value="rank">破解-C > C > 破解 > 无标签；流出人工确认</option><option value="tag_uc">选 [UC]</option><option value="tag_c">选 [C]</option><option value="tag_raw">选原版</option></select></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">同大推荐规则</label><select x-model="prefs.size_keep" class="text-sm"><option value="path_long">最长路径</option><option value="path_short">最短路径</option><option value="name_long">最长名称</option><option value="name_short">最短名称</option></select></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长推荐规则</label><select x-model="prefs.duration_keep" class="text-sm"><option value="min">选最小文件</option><option value="max">选最大文件</option></select></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">洗版推荐规则</label><select x-model="prefs.smart_keep" class="text-sm"><option value="reso_max">最高分辨率</option><option value="reso_min">最低分辨率</option></select></div>
+            <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">删除失败自动重试次数</label><input type="number" x-model.number="prefs.delete_retry_max" min="0" max="10" class="text-sm"></div>
+            <label class="flex items-center gap-2 text-sm cursor-pointer pt-1"><input type="checkbox" x-model="prefs.auto_refresh_library" style="width:auto;min-height:auto" class="accent-[var(--primary)]"><span>删除后自动刷新 Emby 媒体库</span></label>
             <button @click="saveConfig" class="w-full rounded-xl py-2 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">保存偏好</button>
           </div>
-
-          <!-- Delete Queue -->
           <div class="glass rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
             <h2 class="text-lg font-bold">删除队列</h2>
             <div x-show="loading.deleteQueue" class="skeleton h-16 w-full"></div>
             <div x-show="!loading.deleteQueue" class="space-y-1">
               <div class="flex flex-wrap gap-1.5 mb-2">
-                <template x-for="(v, k) in deleteQueue.counts" :key="k">
-                  <span class="tag-pill" :class="k" x-text="k + ': ' + v"></span>
-                </template>
+                <template x-for="(v, k) in deleteQueue.counts" :key="k"><span class="tag-pill" :class="k" x-text="k + ': ' + v"></span></template>
               </div>
-              <template x-for="item in deleteQueue.items" :key="item.emby_id || item.name">
+              <template x-for="(item, idx) in deleteQueue.items" :key="idx">
                 <div class="flex items-center justify-between py-1.5 text-sm border-b border-[var(--line)] last:border-0">
                   <div class="flex items-center gap-2 min-w-0 flex-1">
                     <span class="tag-pill shrink-0" :class="item.status" x-text="item.status"></span>
@@ -639,13 +486,11 @@
               <div x-show="!deleteQueue.items?.length" class="text-sm text-[var(--text-muted)] py-2">队列为空</div>
             </div>
             <div class="flex gap-2 pt-1">
-              <button @click="loadDeleteQueue" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">刷新</button>
-              <button @click="retryFailed" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">重试失败项</button>
-              <button @click="clearDone" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">清理已完成</button>
+              <button @click="loadDeleteQueue" class="filter-btn">刷新</button>
+              <button @click="retryFailed" class="filter-btn">重试失败项</button>
+              <button @click="clearDone" class="filter-btn">清理已完成</button>
             </div>
           </div>
-
-          <!-- Ignore List -->
           <div class="glass rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
             <h2 class="text-lg font-bold">黑名单管理</h2>
             <div x-show="loading.ignored" class="skeleton h-12 w-full"></div>
@@ -661,14 +506,12 @@
           </div>
         </div>
 
-        <!-- ══════ STORAGE PAGE ══════ -->
-        <div x-show="activePage === 'storage'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-5">
+        <!-- ═══ STORAGE PAGE ═══ -->
+        <div x-show="activePage === 'storage'" class="page-enter space-y-5">
           <h1 class="text-xl font-black">存储仪表盘</h1>
           <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold">按媒体库统计</h2>
-            <div x-show="loading.storage" class="space-y-3">
-              <template x-for="i in 4" :key="i"><div class="skeleton h-16 w-full"></div></template>
-            </div>
+            <div x-show="loading.storage" class="space-y-3"><template x-for="i in 4" :key="i"><div class="skeleton h-16 w-full"></div></template></div>
             <div x-show="!loading.storage" class="space-y-3">
               <template x-for="stat in storageStats" :key="stat.library_id || stat.library_name">
                 <div class="space-y-1">
@@ -685,15 +528,18 @@
           </div>
         </div>
 
-        <!-- ══════ LOGS PAGE ══════ -->
-        <div x-show="activePage === 'logs'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-4">
+        <!-- ═══ LOGS PAGE ═══ -->
+        <div x-show="activePage === 'logs'" class="page-enter space-y-4">
           <div class="flex items-center justify-between">
             <h1 class="text-xl font-black">系统日志</h1>
-            <button @click="clearLogs" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">清空</button>
+            <div class="flex gap-2">
+              <button @click="logAutoScroll = !logAutoScroll" class="filter-btn" :class="{active: logAutoScroll}">自动滚动</button>
+              <button @click="clearLogs" class="filter-btn">清空</button>
+            </div>
           </div>
           <div x-ref="logViewer" class="log-viewer">
             <template x-for="(line, i) in logLines" :key="i">
-              <div x-text="line"></div>
+              <div x-text="line" :class="line.includes('[ERROR]') ? 'text-[var(--danger)]' : (line.includes('[WARNING]') ? 'text-[var(--warn)]' : '')"></div>
             </template>
             <div x-show="!logLines.length" class="text-[var(--text-muted)] text-center py-8">暂无日志</div>
           </div>
@@ -702,7 +548,7 @@
       </div>
     </main>
 
-    <!-- ─── MOBILE BOTTOM NAV ─── -->
+    <!-- MOBILE BOTTOM NAV -->
     <nav class="fixed bottom-0 left-0 right-0 z-30 md:hidden glass-strong px-2 py-1 flex justify-around">
       <template x-for="item in navItems" :key="item.id">
         <button @click="navigate(item.id); sidebarOpen = false"
@@ -718,7 +564,6 @@
   <script>
     document.addEventListener('alpine:init', () => {
       Alpine.data('app', () => ({
-        // ── State ──
         sidebarOpen: false,
         activePage: 'scan',
         toasts: [],
@@ -726,14 +571,13 @@
 
         status: {},
         libraries: [],
-        selectedLibs: new Set(),
+        selectedLibs: [],   // FIX: array instead of Set for Alpine reactivity
         scanMode: 'av',
         scanParams: { param_s: '100', duration_scope: 'dir', duration_precision: 'second', page_size: 100 },
 
         scanData: [],
         flatItems: [],
-        selectedIds: new Set(),
-        reviewedIds: new Set(),
+        selectedIds: [],    // FIX: array instead of Set
         resultPage: 1,
         currentFilter: 'all',
 
@@ -753,6 +597,7 @@
         ignoredItems: [],
         storageStats: [],
         logLines: [],
+        logAutoScroll: true,
         wsConnected: false,
         wsReconnectTimer: null,
 
@@ -783,13 +628,8 @@
           if (!this.flatItems.length) return '暂无扫描结果';
           return `扫描结果：${this.scanData.length} 组 / ${this.flatItems.length} 条`;
         },
-        get resultMeta() {
-          if (!this.flatItems.length) return '';
-          const vis = this.visibleFiltered();
-          const rc = vis.filter(i => i.recommend_action === 'review').length;
-          let html = `第 ${this.resultPage} / ${this.pageCount()} 页，本页 ${vis.length} 条，本页已选 ${this.selectedVisibleIds().length} 条`;
-          if (rc) html += ` <span class="review-count" style="display:inline-flex;align-items:center;gap:0.25rem;background:rgba(255,209,102,0.15);color:var(--warn);padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:0.75rem;font-weight:700;">⚠ ${rc} 待确认</span>`;
-          return html;
+        get reviewCount() {
+          return this.visibleFiltered().filter(i => i.recommend_action === 'review').length;
         },
         get filterOptions() {
           if (!this.flatItems.length) return [];
@@ -822,8 +662,6 @@
         // ── Init ──
         init() {
           this.loadConfig().then(() => this.loadLibraries());
-          this.pollStatus();
-          setInterval(() => this.pollStatus(), 3000);
           this.connectWebSocket();
         },
 
@@ -831,12 +669,11 @@
         toast(message, type = 'info') {
           const id = ++this.toastCounter;
           this.toasts.push({ id, message, type, showing: true });
-          setTimeout(() => this.removeToast(this.toasts.findIndex(t => t.id === id)), 3500);
+          setTimeout(() => this.removeToast(id), 3500);
         },
-        removeToast(idx) {
-          if (idx < 0 || idx >= this.toasts.length) return;
-          this.toasts[idx].showing = false;
-          setTimeout(() => { this.toasts.splice(idx, 1); }, 250);
+        removeToast(id) {
+          const idx = this.toasts.findIndex(t => t.id === id);
+          if (idx >= 0) this.toasts.splice(idx, 1);
         },
         toastClasses(type) {
           switch (type) {
@@ -883,7 +720,7 @@
           return tags.join(' · ') || '无标签';
         },
         openEmby(id) {
-          const host = this.form.host || this.status.server_name || '';
+          const host = this.form.host || '';
           if (host) window.open(`${host}/web/index.html#!/item?id=${encodeURIComponent(id)}`, '_blank');
         },
         storageBarPct(size) {
@@ -891,28 +728,22 @@
           return (size / max * 100).toFixed(1);
         },
 
+        // ── Array-based selection helpers (FIX: reactive, no Set) ──
+        _addId(arr, id) { if (!arr.includes(id)) arr.push(id); },
+        _delId(arr, id) { const i = arr.indexOf(id); if (i >= 0) arr.splice(i, 1); },
+
         // ── Navigation ──
         navigate(page) {
           this.activePage = page;
           this.sidebarOpen = false;
+          this.$nextTick(() => { if (this.$refs.mainContent) this.$refs.mainContent.scrollTo(0, 0); });
           if (page === 'settings') { this.loadConfig(); this.loadIgnored(); this.loadDeleteQueue(); }
           if (page === 'logs') this.loadLogs();
           if (page === 'storage') this.loadStorage();
           if (page === 'tasks') this.loadTasks();
         },
 
-        // ── Status Polling ──
-        async pollStatus() {
-          try {
-            const r = await fetch('/api/status');
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            this.status = await r.json();
-          } catch (e) {
-            // silently fail
-          }
-        },
-
-        // ── WebSocket ──
+        // ── Status via WebSocket (no polling) ──
         connectWebSocket() {
           const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
           const wsUrl = `${protocol}//${location.host}/ws`;
@@ -923,20 +754,25 @@
           };
           ws.onmessage = (event) => {
             try {
-              const data = JSON.parse(event.data);
-              if (data.type === 'log' && data.message) {
-                this.logLines.push(data.message);
-                // Keep last 2000 lines
+              const msg = JSON.parse(event.data);
+              if (msg.type === 'log') {
+                // FIX: backend sends {type:"log", data: line}
+                this.logLines.push(msg.data);
                 if (this.logLines.length > 2000) this.logLines.splice(0, this.logLines.length - 2000);
-                this.$nextTick(() => { this.$refs.logViewer?.scrollTo(0, this.$refs.logViewer.scrollHeight); });
+                if (this.logAutoScroll) {
+                  this.$nextTick(() => { if (this.$refs.logViewer) this.$refs.logViewer.scrollTop = this.$refs.logViewer.scrollHeight; });
+                }
               }
-              if (data.type === 'status') {
-                Object.assign(this.status, data.data || {});
+              if (msg.type === 'status') {
+                // Merge status update
+                Object.assign(this.status, msg.data || {});
               }
-              if (data.type === 'toast') {
-                this.toast(data.message, data.level || 'info');
+              if (msg.type === 'connected') {
+                // Initial snapshot on connect
+                this.status = msg.data || {};
+                this.pollStatus(); // fetch full status once
               }
-            } catch (e) { /* non-JSON message, ignore */ }
+            } catch (e) { /* ignore non-JSON */ }
           };
           ws.onclose = () => {
             this.wsConnected = false;
@@ -944,6 +780,15 @@
             this.wsReconnectTimer = setTimeout(() => this.connectWebSocket(), 3000);
           };
           ws.onerror = () => { ws.close(); };
+        },
+
+        // ── Fallback polling (reduced frequency, supplement to WebSocket) ──
+        async pollStatus() {
+          try {
+            const r = await fetch('/api/status');
+            if (!r.ok) return;
+            this.status = await r.json();
+          } catch (e) { /* ignore */ }
         },
 
         // ── Config ──
@@ -983,15 +828,12 @@
                 delete_retry_max: Number(this.prefs.delete_retry_max || 3)
               }
             };
-            const r = await fetch('/api/config', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
+            const r = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!r.ok) { this.toast(await r.text(), 'error'); return; }
             this.form.pwd = '';
             this.toast('配置已保存', 'success');
             this.pollStatus();
+            this.loadLibraries();
           } catch (e) { this.toast('保存失败: ' + e.message, 'error'); }
           finally { this.loading.saveConfig = false; }
         },
@@ -1025,55 +867,37 @@
           try {
             const text = await file.text();
             const payload = JSON.parse(text);
-            const r = await fetch('/api/config/import', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
+            const r = await fetch('/api/config/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const d = await r.json();
-            if (d.status === 'ok') {
-              this.toast('配置导入成功！正在刷新...', 'success');
-              setTimeout(() => location.reload(), 1500);
-            } else {
-              this.toast(d.detail || '导入失败', 'error');
-            }
-          } catch (e) {
-            this.toast('文件格式错误：' + e.message, 'error');
-          }
+            if (d.status === 'ok') { this.toast('配置导入成功！正在刷新...', 'success'); setTimeout(() => location.reload(), 1500); }
+            else { this.toast(d.detail || '导入失败', 'error'); }
+          } catch (e) { this.toast('文件格式错误：' + e.message, 'error'); }
           e.target.value = '';
         },
 
         // ── Libraries ──
         async loadLibraries() {
           this.loading.libraries = true;
-          try {
-            this.libraries = await (await fetch('/api/libraries')).json();
-          } catch (e) { this.libraries = []; }
+          try { this.libraries = await (await fetch('/api/libraries')).json(); }
+          catch (e) { this.libraries = []; }
           finally { this.loading.libraries = false; }
         },
         toggleLib(id) {
-          if (this.selectedLibs.has(id)) this.selectedLibs.delete(id);
-          else this.selectedLibs.add(id);
+          if (this.selectedLibs.includes(id)) this.selectedLibs = this.selectedLibs.filter(x => x !== id);
+          else this.selectedLibs = [...this.selectedLibs, id];
           this.resetResults();
         },
         toggleAllLibs() {
           const all = this.libraries.map(x => x.Id);
-          const on = this.selectedLibs.size !== all.length;
-          this.selectedLibs = new Set(on ? all : []);
-          this.resetResults();
-          this.loadLibraries();
-        },
-
-        // ── Scan Mode ──
-        setMode(id) {
-          this.scanMode = id;
+          if (this.selectedLibs.length !== all.length) this.selectedLibs = [...all];
+          else this.selectedLibs = [];
           this.resetResults();
         },
 
         // ── Scan ──
+        setMode(id) { this.scanMode = id; this.resetResults(); },
         resetResults() {
-          this.selectedIds = new Set();
-          this.reviewedIds = new Set();
+          this.selectedIds = [];
           this.flatItems = [];
           this.scanData = [];
           this.resultPage = 1;
@@ -1081,41 +905,27 @@
         },
         async startScan() {
           this.loading.scan = true;
-          this.scanParams.page_size = Number(this.scanParams.page_size) || 100;
           this.navigate('results');
           try {
-            const libs = [...this.selectedLibs].join(',');
+            const libs = this.selectedLibs.join(',');
             const url = `/api/scan?mode=${this.scanMode}&lib=${libs}&param_s=${this.scanParams.param_s}&duration_scope=${this.scanParams.duration_scope}&duration_precision=${this.scanParams.duration_precision}`;
             const r = await fetch(url);
             if (!r.ok) { this.toast('扫描失败: HTTP ' + r.status, 'error'); return; }
             this.scanData = await r.json();
-            this.flatItems = this.scanData.flatMap(g =>
-              g.items.map(i => ({ ...i, groupTitle: g.title, groupItems: g.items.map(x => x.emby_id) }))
-            );
+            this.flatItems = this.scanData.flatMap(g => g.items.map(i => ({ ...i, groupTitle: g.title })));
             this.resultPage = 1;
-            this.reviewedIds = new Set();
-            this.selectedIds = new Set();
-            // Select recommended deletes
-            this.flatItems.forEach(i => {
-              if (i.recommend_action === 'delete') this.selectedIds.add(i.emby_id);
-            });
-            // Auto mark review items
-            this.flatItems.forEach(i => {
-              if (i.recommend_action === 'review') this.reviewedIds.add(i.emby_id);
-            });
+            this.selectedIds = this.flatItems.filter(i => i.recommend_action === 'delete').map(i => i.emby_id);
             this.toast(`扫描完成: ${this.scanData.length} 组 / ${this.flatItems.length} 条`, 'success');
-          } catch (e) {
-            this.toast('扫描出错: ' + e.message, 'error');
-          }
+          } catch (e) { this.toast('扫描出错: ' + e.message, 'error'); }
           finally { this.loading.scan = false; }
         },
 
-        // ── Results ──
+        // ── Results helpers ──
         visible() {
           if (!this.flatItems.length) return [];
-          const start = (this.resultPage - 1) * this.scanParams.page_size;
-          let end = start + this.scanParams.page_size;
-          // Keep groups together
+          const ps = this.scanParams.page_size || 100;
+          const start = (this.resultPage - 1) * ps;
+          let end = start + ps;
           if (this.flatItems[end] && this.flatItems[end].groupTitle === this.flatItems[end - 1].groupTitle) {
             while (end < this.flatItems.length && this.flatItems[end].groupTitle === this.flatItems[end - 1].groupTitle) end++;
           }
@@ -1126,63 +936,60 @@
           if (this.currentFilter === 'all') return vis;
           return vis.filter(i => i.recommend_action === this.currentFilter);
         },
-        pageCount() {
-          return Math.max(1, Math.ceil(this.flatItems.length / (this.scanParams.page_size || 100)));
-        },
-        prevPage() {
-          if (this.resultPage > 1) { this.resultPage--; }
-        },
-        nextPage() {
-          if (this.resultPage < this.pageCount()) { this.resultPage++; }
-        },
+        pageCount() { return Math.max(1, Math.ceil(this.flatItems.length / (this.scanParams.page_size || 100))); },
+        prevPage() { if (this.resultPage > 1) { this.resultPage--; this.$nextTick(() => this.scrollTopResults()); } },
+        nextPage() { if (this.resultPage < this.pageCount()) { this.resultPage++; this.$nextTick(() => this.scrollTopResults()); } },
+        scrollTopResults() { if (this.$refs.mainContent) this.$refs.mainContent.scrollTo(0, 0); },
+
+        // ── Selection (FIX: array-based for Alpine reactivity) ──
         toggleItem(id, on) {
-          if (on) this.selectedIds.add(id);
-          else this.selectedIds.delete(id);
+          if (on) { if (!this.selectedIds.includes(id)) this.selectedIds = [...this.selectedIds, id]; }
+          else { this.selectedIds = this.selectedIds.filter(x => x !== id); }
         },
         toggleGroupItems(ids) {
-          const allSelected = ids.every(id => this.selectedIds.has(id));
-          ids.forEach(id => allSelected ? this.selectedIds.delete(id) : this.selectedIds.add(id));
+          const allSelected = ids.every(id => this.selectedIds.includes(id));
+          if (allSelected) { this.selectedIds = this.selectedIds.filter(x => !ids.includes(x)); }
+          else { this.selectedIds = [...new Set([...this.selectedIds, ...ids])]; }
         },
         toggleVisiblePage(on) {
-          this.visible().forEach(i => on ? this.selectedIds.add(i.emby_id) : this.selectedIds.delete(i.emby_id));
+          const ids = this.visible().map(i => i.emby_id);
+          if (on) { this.selectedIds = [...new Set([...this.selectedIds, ...ids])]; }
+          else { this.selectedIds = this.selectedIds.filter(x => !ids.includes(x)); }
         },
         selectedVisibleIds() {
-          const visibleSet = new Set(this.visible().map(i => i.emby_id));
-          return [...this.selectedIds].filter(id => visibleSet.has(id));
+          const visSet = new Set(this.visible().map(i => i.emby_id));
+          return this.selectedIds.filter(id => visSet.has(id));
         },
         selectRecommendedPage() {
-          this.visible().forEach(i => {
-            if (i.recommend_action === 'delete') this.selectedIds.add(i.emby_id);
-            else this.selectedIds.delete(i.emby_id);
-          });
+          const ids = this.visible().filter(i => i.recommend_action === 'delete').map(i => i.emby_id);
+          const visIds = new Set(this.visible().map(i => i.emby_id));
+          this.selectedIds = [...new Set([...this.selectedIds.filter(x => !visSet.has(x)), ...ids])];
         },
         selectByTag(tag) {
           this.visible().forEach(i => {
-            let match = false;
-            if (tag === 'tag_raw') match = !i.tag_c && !i.tag_uc && !i.tag_u && !i.tag_crack && !i.tag_leak;
-            else match = i[tag];
-            if (match) this.selectedIds.add(i.emby_id);
-            else this.selectedIds.delete(i.emby_id);
+            let match = tag === 'tag_raw' ? !i.tag_c && !i.tag_uc && !i.tag_u && !i.tag_crack && !i.tag_leak : i[tag];
+            if (match) { if (!this.selectedIds.includes(i.emby_id)) this.selectedIds = [...this.selectedIds, i.emby_id]; }
+            else { this.selectedIds = this.selectedIds.filter(x => x !== i.emby_id); }
           });
         },
         selectResolution(highest) {
-          this.selectKeepPerGroup(items => items.reduce((best, i) =>
-            !best || (highest ? (i.resolution || 0) > (best.resolution || 0) : (i.resolution || 0) < (best.resolution || 0)) ? i : best, null));
+          this._selectKeepPerGroup(items => items.reduce((best, i) => !best || (highest ? (i.resolution || 0) > (best.resolution || 0) : (i.resolution || 0) < (best.resolution || 0)) ? i : best, null));
         },
         selectBySize(largest) {
-          this.selectKeepPerGroup(items => items.reduce((best, i) =>
-            !best || (largest ? i.size > best.size : i.size < best.size) ? i : best, null));
+          this._selectKeepPerGroup(items => items.reduce((best, i) => !best || (largest ? i.size > best.size : i.size < best.size) ? i : best, null));
         },
-        selectKeepPerGroup(picker) {
+        _selectKeepPerGroup(picker) {
           const groups = {};
           this.visible().forEach(i => { (groups[i.groupTitle] ??= []).push(i); });
+          let newSel = [...this.selectedIds];
           Object.values(groups).forEach(items => {
             const keep = picker(items);
             items.forEach(i => {
-              if (!keep || i.emby_id !== keep.emby_id) this.selectedIds.add(i.emby_id);
-              else this.selectedIds.delete(i.emby_id);
+              if (!keep || i.emby_id !== keep.emby_id) { if (!newSel.includes(i.emby_id)) newSel.push(i.emby_id); }
+              else { newSel = newSel.filter(x => x !== i.emby_id); }
             });
           });
+          this.selectedIds = newSel;
         },
 
         // ── Actions ──
@@ -1206,39 +1013,32 @@
           const ids = new Set(payload.ids || []);
           if (!ids.size) { this.toast('未选择条目', 'warning'); return; }
           try {
-            const r = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) { this.toast(d.detail || d.message || '操作失败', 'error'); return; }
             this.toast(d.message || '操作已提交', 'success');
-            // Remove deleted items
             this.flatItems = this.flatItems.filter(i => !ids.has(i.emby_id));
             this.scanData = this.scanData.map(g => ({ ...g, items: g.items.filter(i => !ids.has(i.emby_id)) })).filter(g => g.items.length);
-            ids.forEach(id => this.selectedIds.delete(id));
+            this.selectedIds = this.selectedIds.filter(x => !ids.has(x));
             this.resultPage = Math.min(this.resultPage, this.pageCount());
-            this.loadLogs();
           } catch (e) { this.toast('操作失败: ' + e.message, 'error'); }
         },
 
         // ── Sync ──
         async syncNow() {
           await fetch('/api/sync', { method: 'POST' });
-          this.toast('同步已开始，日志会自动更新', 'success');
+          this.toast('同步已开始', 'success');
           this.navigate('logs');
         },
 
         // ── Tasks ──
         async loadTasks() {
           this.loading.tasks = true;
-          try {
-            this.tasks = await (await fetch('/api/tasks')).json();
-          } catch (e) { this.tasks = []; }
+          try { this.tasks = await (await fetch('/api/tasks')).json(); }
+          catch (e) { this.tasks = []; }
           finally { this.loading.tasks = false; }
         },
-        showTaskForm(data) {
+        showTaskForm() {
           this.taskFormOpen = true;
           this.taskEditId = null;
           this.taskForm = { name: '', mode: 'av', cron: '0 4 * * *', libraries: '', auto_delete: false, enabled: true };
@@ -1250,102 +1050,47 @@
             if (!t) return;
             this.taskFormOpen = true;
             this.taskEditId = id;
-            this.taskForm = {
-              name: t.name || '',
-              mode: t.mode || 'av',
-              cron: t.cron || '0 4 * * *',
-              libraries: t.libraries || '',
-              auto_delete: !!t.auto_delete,
-              enabled: t.enabled !== false
-            };
+            this.taskForm = { name: t.name || '', mode: t.mode || 'av', cron: t.cron || '0 4 * * *', libraries: t.libraries || '', auto_delete: !!t.auto_delete, enabled: t.enabled !== false && t.enabled !== 0 };
           } catch (e) { this.toast('加载任务失败', 'error'); }
         },
         async saveTask() {
           this.loading.saveTask = true;
           try {
-            const payload = {
-              name: this.taskForm.name,
-              mode: this.taskForm.mode,
-              cron: this.taskForm.cron,
-              libraries: this.taskForm.libraries,
-              auto_delete: this.taskForm.auto_delete,
-              enabled: this.taskForm.enabled
-            };
             const url = this.taskEditId ? `/api/tasks/${this.taskEditId}` : '/api/tasks';
             const method = this.taskEditId ? 'PUT' : 'POST';
-            const r = await fetch(url, {
-              method,
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            if (r.ok) {
-              this.taskFormOpen = false;
-              this.loadTasks();
-              this.toast('任务已保存', 'success');
-            } else {
-              this.toast('保存失败', 'error');
-            }
+            const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.taskForm) });
+            if (r.ok) { this.taskFormOpen = false; this.loadTasks(); this.toast('任务已保存', 'success'); }
+            else { this.toast('保存失败', 'error'); }
           } catch (e) { this.toast('保存失败: ' + e.message, 'error'); }
           finally { this.loading.saveTask = false; }
         },
-        async runTask(id) {
-          await fetch(`/api/tasks/${id}/run`, { method: 'POST' });
-          this.toast('任务已触发执行', 'success');
-        },
-        async delTask(id) {
-          if (!confirm('确认删除此任务？')) return;
-          await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-          this.loadTasks();
-          this.toast('任务已删除', 'success');
-        },
+        async runTask(id) { await fetch(`/api/tasks/${id}/run`, { method: 'POST' }); this.toast('任务已触发', 'success'); },
+        async delTask(id) { if (!confirm('确认删除此任务？')) return; await fetch(`/api/tasks/${id}`, { method: 'DELETE' }); this.loadTasks(); this.toast('任务已删除', 'success'); },
 
         // ── Delete Queue ──
         async loadDeleteQueue() {
           this.loading.deleteQueue = true;
-          try {
-            const d = await (await fetch('/api/delete-queue')).json();
-            this.deleteQueue = { counts: d.counts || {}, items: d.items || [] };
-          } catch (e) { this.deleteQueue = { counts: {}, items: [] }; }
+          try { const d = await (await fetch('/api/delete-queue')).json(); this.deleteQueue = { counts: d.counts || {}, items: d.items || [] }; }
+          catch (e) { this.deleteQueue = { counts: {}, items: [] }; }
           finally { this.loading.deleteQueue = false; }
         },
-        async retryFailed() {
-          try {
-            const r = await fetch('/api/delete-queue/retry', { method: 'POST' });
-            const d = await r.json();
-            this.toast(`已重试 ${d.retried || 0} 条`, 'success');
-            this.loadDeleteQueue();
-          } catch (e) { this.toast('重试失败', 'error'); }
-        },
-        async clearDone() {
-          try {
-            const r = await fetch('/api/delete-queue/clear', { method: 'POST' });
-            const d = await r.json();
-            this.toast(`已清理 ${d.cleared || 0} 条`, 'success');
-            this.loadDeleteQueue();
-          } catch (e) { this.toast('清理失败', 'error'); }
-        },
+        async retryFailed() { const d = await (await fetch('/api/delete-queue/retry', { method: 'POST' })).json(); this.toast(`已重试 ${d.retried || 0} 条`, 'success'); this.loadDeleteQueue(); },
+        async clearDone() { const d = await (await fetch('/api/delete-queue/clear', { method: 'POST' })).json(); this.toast(`已清理 ${d.cleared || 0} 条`, 'success'); this.loadDeleteQueue(); },
 
         // ── Ignore ──
         async loadIgnored() {
           this.loading.ignored = true;
-          try {
-            this.ignoredItems = await (await fetch('/api/ignore')).json();
-          } catch (e) { this.ignoredItems = []; }
+          try { this.ignoredItems = await (await fetch('/api/ignore')).json(); }
+          catch (e) { this.ignoredItems = []; }
           finally { this.loading.ignored = false; }
         },
-        async removeIgnored(id) {
-          await fetch(`/api/ignore/${id}`, { method: 'DELETE' });
-          this.loadIgnored();
-          this.toast('已从黑名单恢复', 'success');
-        },
+        async removeIgnored(id) { await fetch(`/api/ignore/${id}`, { method: 'DELETE' }); this.loadIgnored(); this.toast('已恢复', 'success'); },
 
         // ── Storage ──
         async loadStorage() {
           this.loading.storage = true;
-          try {
-            const s = await (await fetch('/api/status')).json();
-            this.storageStats = s.library_stats || [];
-          } catch (e) { this.storageStats = []; }
+          try { const s = await (await fetch('/api/status')).json(); this.storageStats = s.library_stats || []; }
+          catch (e) { this.storageStats = []; }
           finally { this.loading.storage = false; }
         },
 
@@ -1355,18 +1100,11 @@
             const lines = await (await fetch('/api/logs')).json();
             if (Array.isArray(lines)) {
               this.logLines = lines;
-              this.$nextTick(() => {
-                const viewer = this.$refs.logViewer;
-                if (viewer) viewer.scrollTop = 0;
-              });
+              this.$nextTick(() => { if (this.$refs.logViewer && this.logAutoScroll) this.$refs.logViewer.scrollTop = this.$refs.logViewer.scrollHeight; });
             }
           } catch (e) { /* ignore */ }
         },
-        async clearLogs() {
-          await fetch('/api/logs/clear', { method: 'POST' });
-          this.logLines = [];
-          this.toast('日志已清空', 'success');
-        }
+        async clearLogs() { await fetch('/api/logs/clear', { method: 'POST' }); this.logLines = []; this.toast('日志已清空', 'success'); }
       }));
     });
   </script>
