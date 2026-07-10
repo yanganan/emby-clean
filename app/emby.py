@@ -65,7 +65,7 @@ class EmbyClient:
         password: str = "",
         auto_reauth: bool = True,
         on_reauth: Callable[[str, str], None] | None = None,
-    ):
+    ) -> None:
         self.host = normalize_host(host)
         self.token = token
         self.user_id = user_id
@@ -74,6 +74,19 @@ class EmbyClient:
         self._auto_reauth = auto_reauth and bool(username)
         self._last_auth_ts: float = 0.0
         self._on_reauth = on_reauth
+        self._http: httpx.AsyncClient | None = None
+
+    async def _client(self) -> httpx.AsyncClient:
+        """Return a shared httpx.AsyncClient, creating it lazily."""
+        if self._http is None or self._http.is_closed:
+            self._http = httpx.AsyncClient(timeout=45)
+        return self._http
+
+    async def close(self) -> None:
+        """Close the shared HTTP client. Call on shutdown."""
+        if self._http and not self._http.is_closed:
+            await self._http.aclose()
+        self._http = None
 
     # ------------------------------------------------------------------
     #  Authentication
@@ -93,15 +106,16 @@ class EmbyClient:
         if not username:
             raise EmbyError("缺少用户名，无法重新认证")
         payload = {"Username": username, "Pw": password}
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.post(
-                f"{self.host}/Users/AuthenticateByName",
-                headers=auth_headers(""),
-                json=payload,
-            )
-            if resp.status_code >= 400:
-                raise EmbyError(f"认证失败：HTTP {resp.status_code}")
-            data = resp.json()
+        client = await self._client()
+        resp = await client.post(
+            f"{self.host}/Users/AuthenticateByName",
+            headers=auth_headers(""),
+            json=payload,
+            timeout=20,
+        )
+        if resp.status_code >= 400:
+            raise EmbyError(f"认证失败：HTTP {resp.status_code}")
+        data = resp.json()
         user = data.get("User") or {}
         server = data.get("SessionInfo") or {}
         token = data.get("AccessToken") or ""
@@ -168,67 +182,63 @@ class EmbyClient:
             raise EmbyError("Emby 地址为空")
         await self._ensure_authenticated()
         url = urljoin(self.host + "/", path.lstrip("/"))
-        async with httpx.AsyncClient(timeout=45) as client:
+        client = await self._client()
+        resp = await client.get(url, headers=auth_headers(self.token), params=params)
+        if resp.status_code == 401 and await self._reauth_and_retry(401):
             resp = await client.get(url, headers=auth_headers(self.token), params=params)
-            if resp.status_code == 401 and await self._reauth_and_retry(401):
-                resp = await client.get(
-                    url, headers=auth_headers(self.token), params=params
-                )
-            if resp.status_code >= 400:
-                raise EmbyError(f"{path} HTTP {resp.status_code}: {resp.text[:200]}")
-            return resp.json()
+        if resp.status_code >= 400:
+            raise EmbyError(f"{path} HTTP {resp.status_code}: {resp.text[:200]}")
+        return resp.json()
 
     async def post(self, path: str, params: dict[str, Any] | None = None) -> Any:
         await self._ensure_authenticated()
         url = urljoin(self.host + "/", path.lstrip("/"))
-        async with httpx.AsyncClient(timeout=45) as client:
-            resp = await client.post(
-                url, headers=auth_headers(self.token), params=params
-            )
-            if resp.status_code == 401 and await self._reauth_and_retry(401):
-                resp = await client.post(
-                    url, headers=auth_headers(self.token), params=params
-                )
-            if resp.status_code >= 400:
-                raise EmbyError(f"{path} HTTP {resp.status_code}: {resp.text[:200]}")
-            if not resp.text:
-                return {"ok": True}
-            return resp.json() if "json" in resp.headers.get("content-type", "") else {"ok": True}
+        client = await self._client()
+        resp = await client.post(url, headers=auth_headers(self.token), params=params)
+        if resp.status_code == 401 and await self._reauth_and_retry(401):
+            resp = await client.post(url, headers=auth_headers(self.token), params=params)
+        if resp.status_code >= 400:
+            raise EmbyError(f"{path} HTTP {resp.status_code}: {resp.text[:200]}")
+        if not resp.text:
+            return {"ok": True}
+        return resp.json() if "json" in resp.headers.get("content-type", "") else {"ok": True}
 
     async def delete(self, item_id: str) -> None:
         await self._ensure_authenticated()
-        async with httpx.AsyncClient(timeout=45) as client:
+        client = await self._client()
+        resp = await client.delete(
+            f"{self.host}/Items/{item_id}",
+            headers=auth_headers(self.token),
+        )
+        if resp.status_code == 401 and await self._reauth_and_retry(401):
             resp = await client.delete(
                 f"{self.host}/Items/{item_id}",
                 headers=auth_headers(self.token),
             )
-            if resp.status_code == 401 and await self._reauth_and_retry(401):
-                resp = await client.delete(
-                    f"{self.host}/Items/{item_id}",
-                    headers=auth_headers(self.token),
-                )
-            if resp.status_code >= 400:
-                raise EmbyError(f"删除 {item_id} 失败：HTTP {resp.status_code}")
+        if resp.status_code >= 400:
+            raise EmbyError(f"删除 {item_id} 失败：HTTP {resp.status_code}")
 
     async def item_exists(self, item_id: str) -> bool:
         if not self.user_id:
             raise EmbyError("缺少 user_id，请先保存配置")
         await self._ensure_authenticated()
-        async with httpx.AsyncClient(timeout=20) as client:
+        client = await self._client()
+        resp = await client.get(
+            f"{self.host}/Users/{self.user_id}/Items/{item_id}",
+            headers=auth_headers(self.token),
+            timeout=20,
+        )
+        if resp.status_code == 401 and await self._reauth_and_retry(401):
             resp = await client.get(
                 f"{self.host}/Users/{self.user_id}/Items/{item_id}",
                 headers=auth_headers(self.token),
+                timeout=20,
             )
-            if resp.status_code == 401 and await self._reauth_and_retry(401):
-                resp = await client.get(
-                    f"{self.host}/Users/{self.user_id}/Items/{item_id}",
-                    headers=auth_headers(self.token),
-                )
-            if resp.status_code == 404:
-                return False
-            if resp.status_code >= 400:
-                raise EmbyError(f"确认 {item_id} 删除状态失败：HTTP {resp.status_code}")
-            return True
+        if resp.status_code == 404:
+            return False
+        if resp.status_code >= 400:
+            raise EmbyError(f"确认 {item_id} 删除状态失败：HTTP {resp.status_code}")
+        return True
 
     # ------------------------------------------------------------------
     #  Library / item helpers

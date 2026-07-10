@@ -370,27 +370,45 @@ def decorate_item(item: dict[str, Any], mode: str) -> dict[str, Any]:
 
 def apply_recommendations(items: list[dict[str, Any]], mode: str, prefs: dict[str, Any]) -> None:
     keep_id = ""
+    keep_reason = ""
     if mode == "av":
         keep_id = pick_best_version(items)
+        keep_reason = "优先级最高（破解-C > C > 破解 > 无标签），分辨率/大小次优"
     elif mode == "smart":
-        keep_id = pick_resolution(items, highest=prefs.get("smart_keep", "reso_max") != "reso_min")
+        highest = prefs.get("smart_keep", "reso_max") != "reso_min"
+        keep_id = pick_resolution(items, highest=highest)
+        keep_reason = f"{'最高' if highest else '最低'}分辨率 + 最大文件"
     elif mode == "size":
         keep_id = pick_by_name_path(items, prefs.get("size_keep", "path_long"))
+        rule_label = {"path_long": "最长路径", "path_short": "最短路径", "name_long": "最长名称", "name_short": "最短名称"}.get(prefs.get("size_keep", "path_long"), "最长路径")
+        keep_reason = f"按 {rule_label} 保留"
     elif mode == "duration":
         keep_id = pick_largest(items) if prefs.get("duration_keep") == "max" else pick_smallest(items)
+        keep_reason = f"{'最大' if prefs.get('duration_keep') == 'max' else '最小'}文件保留"
     if not keep_id and items:
         keep_id = pick_largest(items)
+        keep_reason = "默认保留最大文件"
     for item in items:
         if mode == "av" and item.get("tag_leak"):
             item["recommend_action"] = "review"
-            item["recommend_reason"] = "命中“流出/泄露”，不自动勾选，请人工确认"
+            item["recommend_reason"] = "命中\u201c流出/泄露\u201d，不自动勾选，请人工确认"
             continue
         if keep_id and item["emby_id"] == keep_id:
             item["recommend_action"] = "keep"
-            item["recommend_reason"] = "按优先级建议保留：破解-C > C > 破解 > 无标签"
+            item["recommend_reason"] = f"建议保留：{keep_reason}"
         else:
             item["recommend_action"] = "delete" if mode in {"av", "smart", "size", "duration"} else ""
-            item["recommend_reason"] = "同组重复项" if item["recommend_action"] == "delete" else ""
+            if item["recommend_action"] == "delete":
+                tags = []
+                if item.get("tag_leak"): tags.append("流出")
+                if item.get("tag_crack"): tags.append("破解")
+                if item.get("tag_c"): tags.append("C")
+                if item.get("tag_uc"): tags.append("UC")
+                if item.get("tag_u"): tags.append("U")
+                tag_desc = f"（标签: {'/'.join(tags) or '无'}）" if tags else ""
+                item["recommend_reason"] = f"与保留项重复{tag_desc}，{mode}模式建议删除"
+            else:
+                item["recommend_reason"] = ""
 
 
 def version_rank(item: dict[str, Any]) -> int:
