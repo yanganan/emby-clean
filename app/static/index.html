@@ -1,319 +1,1374 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Emby Clean</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b1020'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='%234db5ff'%3E🧹%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpine@3.x.x/dist/cdn.min.js"></script>
   <style>
-    :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2b;--panel2:#172238;--line:#26324a;--text:#edf4ff;--muted:#91a0b8;--primary:#4db5ff;--danger:#fb5b75;--ok:#37d99e;--warn:#ffd166}
-    *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:linear-gradient(135deg,#08101f,#111827 55%,#0b1020);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;display:flex;-webkit-text-size-adjust:100%}
-    aside{width:300px;padding:24px 20px;border-right:1px solid var(--line);background:rgba(7,11,22,.88);position:sticky;top:0;height:100vh;overflow:auto} main{flex:1;padding:28px;overflow:auto;height:100vh}
-    h1{margin:0 0 18px;font-size:26px} h2{margin:0 0 16px;font-size:20px}.brand{font-size:24px;font-weight:900;margin-bottom:24px}.brand span{color:var(--primary)}
-    .panel{background:rgba(18,26,43,.84);border:1px solid var(--line);border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
-    .stat{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);color:var(--muted)}.stat strong{color:var(--text);text-align:right}
-    .nav{display:grid;gap:8px;margin-top:18px}.nav button,button{border:0;border-radius:8px;background:var(--panel2);color:var(--text);padding:11px 14px;font-weight:700;cursor:pointer;min-height:42px;touch-action:manipulation}.nav button.active,.primary{background:var(--primary);color:#06111e}.danger{background:var(--danger);color:#fff}.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.ok{color:var(--ok)}.warn{color:var(--warn)}.muted{color:var(--muted)}
-    .grid{display:grid;gap:16px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.libs,.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.chip{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:8px;padding:14px;min-height:72px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;flex-direction:column}.chip.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(77,181,255,.18) inset;color:#bfe5ff}
-    .lib-card{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:8px;overflow:hidden;cursor:pointer;position:relative;transition:border-color .15s}.lib-card.active{border-color:var(--primary);box-shadow:0 0 0 2px rgba(77,181,255,.18) inset}
-    .lib-card-img{width:100%;height:80px;object-fit:cover;background:#050811;display:block}.lib-card-body{padding:10px 12px}.lib-card-body strong{font-size:13px;display:block;margin-bottom:4px}.lib-card-body small{font-size:11px}
-    .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:2px 10px;margin-top:6px}.info-grid .info-item{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:3px}.info-grid .info-item .label{color:var(--muted);opacity:.6}
-    label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:800;text-transform:uppercase;letter-spacing:.04em} input,select{width:100%;border:1px solid var(--line);background:#070b14;color:var(--text);border-radius:8px;padding:10px 12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.page{display:none}.page.active{display:block}
-    .toolbar{display:flex;gap:10px;justify-content:space-between;align-items:center;margin:14px 0;flex-wrap:wrap}.stickybar{position:sticky;top:-28px;z-index:5;background:rgba(11,16,32,.96);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:16px;backdrop-filter:blur(12px)}
-    .more-actions{width:100%;margin-top:8px}.more-actions summary{display:none;color:var(--muted);font-weight:800;cursor:pointer;padding:10px 0}.more-panel{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.more-actions:not([open]) .more-panel{display:flex}
-    .group{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px;background:rgba(0,0,0,.12)}.group-head{padding:12px 14px;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}.item{display:grid;grid-template-columns:auto 76px 1fr auto;gap:12px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);align-items:center}.poster{width:76px;height:112px;border-radius:8px;object-fit:cover;background:#050811;border:1px solid var(--line)}.no-poster{display:flex;align-items:center;justify-content:center;color:var(--warn);font-size:12px;text-align:center}
-    .item small{color:var(--muted);display:block;word-break:break-all;margin-top:4px}
-    .item.review-item{background:rgba(255,209,102,.06);border-left:3px solid var(--warn)}
-    .item.review-item .poster{border-color:var(--warn)}
-    .item.delete-item{background:rgba(251,91,117,.04)}
-    .filter-bar{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center}
-    .filter-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--muted);cursor:pointer;font-size:13px;font-weight:700;transition:all .15s}
-    .filter-btn:hover{border-color:var(--primary);color:var(--text)}
-    .filter-btn.active{background:var(--primary);color:#06111e;border-color:var(--primary)}
-    .filter-btn .count{margin-left:4px;opacity:.7;font-weight:900}
-    .review-count{display:inline-flex;align-items:center;gap:4px;background:rgba(255,209,102,.15);color:var(--warn);padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700}.badge{border:1px solid var(--line);border-radius:999px;padding:3px 8px;color:var(--muted);font-size:12px}.badge.delete{color:#ff9bad;border-color:rgba(251,91,117,.45)}.badge.keep{color:#76e6b7;border-color:rgba(55,217,158,.45)}.badge.review{color:#ffd166;border-color:rgba(255,209,102,.5)}.badge.rank{color:#bfe5ff;border-color:rgba(77,181,255,.45)}
-    .log{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;background:#050811;border:1px solid var(--line);border-radius:8px;padding:18px;min-height:460px;overflow:auto}.mini{font-size:12px}.split{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center}
-    .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;margin:2px}.tag.pending{background:rgba(77,181,255,.15);color:#4db5ff}.tag.running{background:rgba(255,209,102,.15);color:#ffd166}.tag.failed{background:rgba(251,91,117,.15);color:#fb5b75}.tag.done{background:rgba(55,217,158,.15);color:#37d99e}
-    .lib-bar{background:rgba(255,255,255,.06);border-radius:4px;height:8px;overflow:hidden;margin-top:6px}.lib-bar-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--ok));transition:width .3s}
-    @media(max-width:960px){
-      body{display:block}
-      aside{width:auto;height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:14px;background:rgba(7,11,22,.96)}
-      main{height:auto;padding:16px 14px 96px;overflow:visible}
-      h1{font-size:22px}h2{font-size:18px}.brand{font-size:22px;margin-bottom:12px}
-      .panel{padding:16px;margin-bottom:14px}.two{grid-template-columns:1fr}
-      aside .panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;margin-bottom:12px}
-      aside .panel .stat{min-width:0}.stat strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-      #ready,#sync_detail,aside .panel button{grid-column:1/-1}
-      body:not([data-page="clean"]) aside .panel,body:not([data-page="clean"]) aside>p{display:none}
-      body:not([data-page="clean"]) aside{position:sticky;top:0;z-index:9}
-      body:not([data-page="clean"]) .brand{margin-bottom:6px}
-      .nav{grid-template-columns:repeat(6,minmax(70px,1fr));gap:6px;margin-top:10px;position:sticky;top:0;z-index:8;background:rgba(7,11,22,.96);padding:8px 0}
-      .nav button{padding:10px 6px;font-size:12px}
-      .libs,.modes{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chip{min-height:66px;padding:12px 10px}.lib-card-img{height:60px}.lib-card-body{padding:8px 10px}.lib-card-body strong{font-size:12px}.info-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}
-      .split{grid-template-columns:1fr}.split button{width:100%}
-      .row>div[style*="width"]{width:calc(50% - 5px)!important}
-      .toolbar{align-items:stretch}.toolbar>div:first-child{width:100%}.toolbar button{flex:1 1 auto}
-      .stickybar{top:0;margin:0 -14px 14px;border-left:0;border-right:0;border-radius:0;padding:10px 14px}
-      .stickybar .toolbar{margin:0}.stickybar .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.stickybar .row button{width:100%;padding:10px 8px;font-size:12px}
-      .more-actions summary{display:block}.more-actions:not([open]) .more-panel{display:none}.more-actions[open] .more-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.more-actions .row{display:contents}.more-actions button{width:100%;font-size:12px}
-      #mode_actions{display:contents}
-      .item{grid-template-columns:auto 60px minmax(0,1fr);gap:10px;padding:12px}.poster{width:60px;height:90px}.item>.row{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:8px}.item>.row button{width:100%;padding:10px 8px;font-size:12px}.item strong{display:block;margin-bottom:6px}.badge{display:inline-flex;margin:2px 2px 2px 0;max-width:100%;white-space:normal}
-      .group-head{align-items:flex-start}.group-head strong{word-break:break-all}.log{min-height:55vh;max-height:70vh;padding:14px;font-size:12px}
+    /* ── CSS Custom Properties for theming ── */
+    :root {
+      color-scheme: dark;
+      --glass-bg: rgba(18, 26, 43, 0.72);
+      --glass-border: rgba(38, 50, 74, 0.6);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+      --primary: #4db5ff;
+      --primary-glow: rgba(77, 181, 255, 0.25);
+      --danger: #fb5b75;
+      --danger-glow: rgba(251, 91, 117, 0.25);
+      --success: #37d99e;
+      --success-glow: rgba(55, 217, 158, 0.2);
+      --warn: #ffd166;
+      --warn-glow: rgba(255, 209, 102, 0.2);
+      --text: #edf4ff;
+      --text-muted: #91a0b8;
+      --bg-deep: #0b1020;
+      --bg-gradient: linear-gradient(135deg, #08101f, #111827 55%, #0b1020);
+      --line: #26324a;
     }
-    @media(max-width:520px){
-      aside{padding:12px}.brand{margin-bottom:10px}main{padding:12px 10px 92px}
-      aside .panel{grid-template-columns:1fr}.nav{grid-template-columns:repeat(3,minmax(0,1fr));position:static}
-      .libs,.modes{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.lib-card-img{height:50px}.lib-card-body{padding:6px 8px}.info-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:1px 6px}.info-grid .info-item{font-size:10px}.row>div[style*="width"]{width:100%!important}
-      .stickybar{margin-left:-10px;margin-right:-10px;padding:10px}.stickybar .row{grid-template-columns:repeat(3,minmax(0,1fr))}.stickybar .row .danger{grid-column:1/-1}
-      .item{grid-template-columns:28px 68px minmax(0,1fr);padding:10px}.poster{width:68px;height:98px}.item>.row{grid-template-columns:repeat(3,minmax(0,1fr))}
-      input[type="checkbox"]{width:20px;height:20px}.panel{padding:14px}.log{font-size:11px}
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --glass-bg: rgba(245, 247, 252, 0.78);
+        --glass-border: rgba(200, 210, 230, 0.6);
+        --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        --text: #0f172a;
+        --text-muted: #64748b;
+        --bg-deep: #f1f5f9;
+        --bg-gradient: linear-gradient(135deg, #e2e8f0, #f8fafc 55%, #eef2f7);
+        --line: #cbd5e1;
+      }
     }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg-gradient);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+    }
+    /* ── Glassmorphism card ── */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px) saturate(1.4);
+      -webkit-backdrop-filter: blur(16px) saturate(1.4);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+    }
+    .glass-strong {
+      background: rgba(11, 16, 32, 0.82);
+      backdrop-filter: blur(20px) saturate(1.5);
+      -webkit-backdrop-filter: blur(20px) saturate(1.5);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    /* ── Sidebar scroll ── */
+    .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+    .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    /* ── Utility overrides ── */
+    input, select, textarea {
+      background: rgba(7, 11, 20, 0.6);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 0.5rem;
+      padding: 0.625rem 0.75rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    select { cursor: pointer; }
+    /* ── Chip / Lib card ── */
+    .chip-off { border-color: var(--line); }
+    .chip-on { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow) inset; }
+    /* ── Group / Item ── */
+    .group-card { border: 1px solid var(--line); border-radius: 0.75rem; overflow: hidden; margin-bottom: 0.875rem; background: rgba(0,0,0,0.10); }
+    .item-row { display: grid; grid-template-columns: auto 76px 1fr auto; gap: 0.75rem; padding: 0.75rem 0.875rem; border-top: 1px solid rgba(255,255,255,0.06); align-items: center; }
+    .item-review { background: rgba(255,209,102,0.06); border-left: 3px solid var(--warn); }
+    .item-delete { background: rgba(251,91,117,0.04); }
+    .item-row .poster { width: 76px; height: 112px; border-radius: 0.5rem; object-fit: cover; background: #050811; border: 1px solid var(--line); }
+    .item-row .no-poster { display: flex; align-items: center; justify-content: center; color: var(--warn); font-size: 0.75rem; text-align: center; }
+    /* ── Filter bar ── */
+    .filter-btn { padding: 0.375rem 0.75rem; border-radius: 0.375rem; border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--text-muted); cursor: pointer; font-size: 0.8125rem; font-weight: 700; transition: all 0.15s; }
+    .filter-btn:hover { border-color: var(--primary); color: var(--text); }
+    .filter-btn.active { background: var(--primary); color: #06111e; border-color: var(--primary); }
+    .filter-btn .ct { margin-left: 0.25rem; opacity: 0.7; font-weight: 900; }
+    /* ── Badge / Tag ── */
+    .badge { border-radius: 999px; padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 600; border: 1px solid var(--line); color: var(--text-muted); }
+    .badge.delete { color: #ff9bad; border-color: rgba(251,91,117,0.45); }
+    .badge.keep { color: #76e6b7; border-color: rgba(55,217,158,0.45); }
+    .badge.review { color: #ffd166; border-color: rgba(255,209,102,0.5); }
+    .badge.rank { color: #bfe5ff; border-color: rgba(77,181,255,0.45); }
+    .tag-pill { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.6875rem; font-weight: 700; margin: 0.125rem; }
+    .tag-pill.pending { background: rgba(77,181,255,0.15); color: #4db5ff; }
+    .tag-pill.running { background: rgba(255,209,102,0.15); color: #ffd166; }
+    .tag-pill.failed { background: rgba(251,91,117,0.15); color: #fb5b75; }
+    .tag-pill.done { background: rgba(55,217,158,0.15); color: #37d99e; }
+    /* ── Progress bar ── */
+    .prog-bar { background: rgba(255,255,255,0.06); border-radius: 4px; height: 8px; overflow: hidden; }
+    .prog-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); transition: width 0.4s ease; border-radius: 4px; }
+    /* ── Log viewer ── */
+    .log-viewer { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-all; background: rgba(5, 8, 17, 0.7); border: 1px solid var(--line); border-radius: 0.75rem; padding: 1rem; min-height: 420px; max-height: 65vh; overflow-y: auto; font-size: 0.8125rem; line-height: 1.5; }
+    .log-viewer::-webkit-scrollbar { width: 4px; }
+    .log-viewer::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    /* ── Info grid ── */
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1px 8px; margin-top: 0.25rem; }
+    .info-grid .info-item { font-size: 0.6875rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.125rem; }
+    /* ── Toast ── */
+    .toast-enter { animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .toast-exit { animation: toastOut 0.25s ease-in forwards; }
+    @keyframes toastIn {
+      0% { opacity: 0; transform: translateY(-16px) scale(0.95); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-12px) scale(0.95); }
+    }
+    /* ── Page transitions ── */
+    .page-enter { animation: pageFadeIn 0.3s ease-out; }
+    @keyframes pageFadeIn {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    /* ── Spinner ── */
+    .spinner { display: inline-block; width: 1.25rem; height: 1.25rem; border: 2px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── Lib card ── */
+    .lib-card { border: 1px solid var(--line); border-radius: 0.75rem; overflow: hidden; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; background: rgba(255,255,255,0.02); }
+    .lib-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow) inset; }
+    .lib-card-img { width: 100%; height: 80px; object-fit: cover; background: #050811; display: block; }
+    /* ── Skeleton ── */
+    .skeleton { background: linear-gradient(90deg, var(--line) 25%, rgba(255,255,255,0.06) 50%, var(--line) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 0.375rem; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .item-row { grid-template-columns: auto 60px minmax(0, 1fr); gap: 0.625rem; }
+      .item-row .poster { width: 60px; height: 90px; }
+      .item-row > .row:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+      .item-row > .row:last-child button { width: 100%; }
+      .lib-card-img { height: 60px; }
+      .info-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+      .log-viewer { min-height: 50vh; max-height: 60vh; }
+    }
+    @media (max-width: 480px) {
+      .item-row { grid-template-columns: 28px 68px minmax(0, 1fr); padding: 0.625rem; }
+      .item-row .poster { width: 68px; height: 98px; }
+      input[type="checkbox"] { width: 20px; height: 20px; }
+    }
+    /* ── Scrollbar for main ── */
+    .main-scroll::-webkit-scrollbar { width: 6px; }
+    .main-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+    .main-scroll::-webkit-scrollbar-track { background: transparent; }
   </style>
 </head>
-<body data-page="clean">
-  <aside>
-    <div class="brand">Emby<span>Clean</span></div>
-    <div class="panel">
-      <div class="stat"><span>服务器</span><strong id="server">-</strong></div>
-      <div class="stat"><span>版本</span><strong id="ver">-</strong></div>
-      <div class="stat"><span>用户</span><strong id="user">-</strong></div>
-      <div class="stat"><span>缓存媒体</span><strong id="cache">0</strong></div>
-      <div class="stat"><span>媒体对账</span><strong id="expected">0</strong></div>
-      <div class="stat"><span>总占用</span><strong id="total_storage">-</strong></div>
-      <div class="stat"><span>已清理</span><strong id="cleaned">0</strong></div>
-      <div class="stat"><span>释放</span><strong id="saved">0 B</strong></div>
-      <p id="ready" class="muted">连接状态检测中</p>
-      <p id="sync_detail" class="muted mini"></p>
-      <button class="primary" onclick="syncNow()" style="width:100%">立即同步元数据</button>
+<body>
+  <div x-data="app()" x-init="init()" class="flex min-h-screen" :class="{ 'overflow-hidden': sidebarOpen }">
+    <!-- ─── TOAST CONTAINER ─── -->
+    <div class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:380px">
+      <template x-for="(toast, idx) in toasts" :key="toast.id">
+        <div x-show="toast.showing" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-x-8"
+             x-transition:enter-end="opacity-100 translate-x-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-x-0"
+             x-transition:leave-end="opacity-0 translate-x-8"
+             class="pointer-events-auto rounded-xl p-4 shadow-2xl border backdrop-blur-md flex items-start gap-3"
+             :class="toastClasses(toast.type)">
+          <template x-if="toast.type === 'success'">
+            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          </template>
+          <template x-if="toast.type === 'error'">
+            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </template>
+          <template x-if="toast.type === 'warning'">
+            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--warn)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 2l10 18H2L12 2z"/></svg>
+          </template>
+          <template x-if="toast.type === 'info' || toast.type === 'loading'">
+            <svg class="w-5 h-5 mt-0.5 shrink-0 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 110 20 10 10 0 010-20z"/></svg>
+          </template>
+          <div class="flex-1 min-w-0">
+            <p x-text="toast.message" class="text-sm font-medium leading-snug" :class="toast.type==='success'?'text-[var(--success)]':toast.type==='error'?'text-[var(--danger)]':toast.type==='warning'?'text-[var(--warn)]':'text-[var(--text)]'"></p>
+          </div>
+          <button @click="removeToast(idx)" class="text-[var(--text-muted)] hover:text-[var(--text)] shrink-0 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </template>
     </div>
-    <div class="nav">
-      <button class="active" onclick="nav('clean',this)">扫描</button>
-      <button onclick="nav('results',this)">结果</button>
-      <button onclick="nav('tasks',this)">任务</button>
-      <button onclick="nav('settings',this)">配置</button>
-      <button onclick="nav('storage',this)">存储</button>
-      <button onclick="nav('logs',this)">日志</button>
+
+    <!-- ─── MOBILE HAMBURGER ─── -->
+    <div class="fixed top-0 left-0 right-0 z-30 glass-strong px-4 py-3 flex items-center justify-between md:hidden">
+      <div class="text-lg font-black tracking-tight">Emby<span class="text-[var(--primary)]">Clean</span></div>
+      <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg hover:bg-[var(--line)] transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path x-show="!sidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          <path x-show="sidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
     </div>
-    <p class="muted mini" style="margin-top:18px">v2.0 · 不建议映射公网</p>
-  </aside>
 
-  <main>
-    <!-- ===================== SCAN CONFIG ===================== -->
-    <section id="p-clean" class="page active">
-      <div class="panel">
-        <div class="split"><h2>1. 选择媒体库</h2><button class="ghost" onclick="toggleAllLibs()">全选/反选</button></div>
-        <div id="libs" class="libs"></div>
-      </div>
-      <div class="panel">
-        <h2>2. 扫描模式</h2>
-        <div id="modes" class="modes"></div>
-        <div class="row" style="margin-top:14px">
-          <div style="width:150px"><label>极小文件 MB</label><input id="param_s" value="100"></div>
-          <div style="width:150px"><label>时长范围</label><select id="duration_scope"><option value="dir">同目录</option><option value="library">全库</option></select></div>
-          <div style="width:150px"><label>时长精度</label><select id="duration_precision"><option value="second">整秒</option><option value="centisecond">百分秒</option></select></div>
-          <div style="width:150px"><label>每页处理</label><select id="page_size"><option>50</option><option selected>100</option><option>200</option></select></div>
-        </div>
-        <div class="toolbar">
-          <button class="primary" onclick="scan()">开始扫描</button>
-          <span class="muted mini">结果会进入独立页面；每页默认勾选建议删除项，处理完再翻下一页。</span>
-        </div>
-      </div>
-    </section>
+    <!-- ─── OVERLAY (mobile) ─── -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm md:hidden" x-transition:enter="transition-opacity duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
 
-    <!-- ===================== SCAN RESULTS ===================== -->
-    <section id="p-results" class="page">
-      <div class="stickybar">
-        <div class="toolbar">
-          <div><strong id="result_title">暂无扫描结果</strong><div id="result_meta" class="muted mini"></div></div>
-          <div class="row">
-            <button class="ghost" onclick="navByName('clean')">返回扫描</button>
-            <button class="ghost" onclick="prevPage()">上一页</button>
-            <button class="ghost" onclick="nextPage()">下一页</button>
-            <button class="danger" onclick="deleteSelected()">队列删除选中</button>
+    <!-- ─── SIDEBAR ─── -->
+    <aside class="glass-strong sidebar-scroll fixed md:sticky top-0 left-0 z-20 h-full w-72 shrink-0 flex flex-col pt-16 md:pt-0 transition-transform duration-300 md:translate-x-0"
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
+      <!-- Brand -->
+      <div class="px-6 pt-6 pb-2 hidden md:block">
+        <div class="text-2xl font-black tracking-tight">Emby<span class="text-[var(--primary)]">Clean</span></div>
+      </div>
+
+      <!-- Status Panel -->
+      <div class="glass mx-4 mt-4 rounded-xl p-4 space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">服务器</span><strong x-text="status.server_name || '-'" class="font-semibold"></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">版本</span><strong x-text="status.server_ver || '-'" class="font-semibold"></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">用户</span><strong x-text="status.user_name || '-'" class="font-semibold"></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">缓存媒体</span><strong x-text="status.media_cache ?? status.local_cache ?? 0" class="font-semibold"></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">媒体对账</span><strong class="font-semibold"><span x-text="status.media_cache ?? 0"></span> / <span x-text="status.library_expected || 0"></span></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">总占用</span><strong x-text="bytes(status.total_storage)" class="font-semibold"></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">已清理</span><strong x-text="status.cleaned_count || 0" class="font-semibold"></strong></div>
+        <div class="flex justify-between"><span class="text-[var(--text-muted)]">释放</span><strong x-text="bytes(status.saved_space)" class="font-semibold"></strong></div>
+        <div class="pt-1 border-t border-[var(--line)]">
+          <span x-show="status.connected" class="text-[var(--success)] font-semibold text-xs">● 已连接</span>
+          <span x-show="!status.connected" class="text-[var(--text-muted)] font-semibold text-xs">连接状态检测中</span>
+        </div>
+        <div x-text="syncDetailText" class="text-xs text-[var(--text-muted)] leading-tight"></div>
+        <button @click="syncNow" class="w-full rounded-lg py-2 px-3 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all mt-1">立即同步元数据</button>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto sidebar-scroll">
+        <template x-for="item in navItems" :key="item.id">
+          <button @click="navigate(item.id)"
+                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
+                  :class="activePage === item.id ? 'bg-[var(--primary)] text-[#06111e] shadow-lg shadow-[var(--primary-glow)]' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--line)]'">
+            <span x-text="item.icon" class="text-lg"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+
+      <div class="px-4 pb-4 text-xs text-[var(--text-muted)]">v2.0 · 不建议映射公网</div>
+    </aside>
+
+    <!-- ─── MAIN CONTENT ─── -->
+    <main class="flex-1 main-scroll pt-16 md:pt-0 overflow-y-auto min-h-screen" style="height:100vh">
+      <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6 pb-28 md:pb-6 space-y-5">
+
+        <!-- ══════ SCAN PAGE ══════ -->
+        <div x-show="activePage === 'scan'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-5">
+          <!-- Library Selection -->
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-bold">1. 选择媒体库</h2>
+              <button @click="toggleAllLibs" class="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors px-3 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--primary)]">全选/反选</button>
+            </div>
+            <div x-show="loading.libraries" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <template x-for="i in 6" :key="i">
+                <div class="rounded-xl overflow-hidden"><div class="skeleton h-20"></div><div class="p-3 space-y-2"><div class="skeleton h-3 w-3/4"></div><div class="skeleton h-2 w-1/2"></div></div></div>
+              </template>
+            </div>
+            <div x-show="!loading.libraries" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <template x-for="lib in libraries" :key="lib.Id">
+                <div class="lib-card" :class="{ active: selectedLibs.has(lib.Id) }" @click="toggleLib(lib.Id)">
+                  <img class="lib-card-img" :src="'/emby-lib-image/' + encodeURIComponent(lib.Id)" loading="lazy" @error.once="$el.style.display='none'">
+                  <div class="p-3">
+                    <div class="font-semibold text-sm truncate" x-text="lib.Name"></div>
+                    <div class="text-xs text-[var(--text-muted)] mt-0.5 truncate" x-text="(lib.CollectionType || '') + ' · ' + (lib.CachedCount ?? 0) + '/' + (lib.ItemCount ?? 0) + ' 条'"></div>
+                  </div>
+                </div>
+              </template>
+              <div x-show="!libraries.length && !loading.libraries" class="col-span-full text-sm text-[var(--text-muted)] py-4 text-center">无媒体库 — 请先在「配置」页保存 Emby 信息</div>
+            </div>
+          </div>
+
+          <!-- Scan Mode -->
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+            <h2 class="text-lg font-bold">2. 扫描模式</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <template x-for="[id, label] in modes" :key="id">
+                <div @click="setMode(id)" class="rounded-xl p-4 text-center cursor-pointer transition-all duration-150 border min-h-[4rem] flex items-center justify-center text-sm font-semibold"
+                     :class="scanMode === id ? 'chip-on bg-[var(--primary-glow)] text-[var(--primary)]' : 'chip-off bg-white/[0.02] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)]'">
+                  <span x-text="label"></span>
+                </div>
+              </template>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">极小文件 MB</label>
+                <input type="number" x-model="scanParams.param_s" class="text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长范围</label>
+                <select x-model="scanParams.duration_scope" class="text-sm">
+                  <option value="dir">同目录</option>
+                  <option value="library">全库</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长精度</label>
+                <select x-model="scanParams.duration_precision" class="text-sm">
+                  <option value="second">整秒</option>
+                  <option value="centisecond">百分秒</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">每页处理</label>
+                <select x-model.number="scanParams.page_size" class="text-sm">
+                  <option>50</option>
+                  <option selected>100</option>
+                  <option>200</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 pt-1">
+              <button @click="startScan" :disabled="loading.scan" class="rounded-xl py-2.5 px-6 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <span x-show="loading.scan" class="spinner"></span>
+                <span x-text="loading.scan ? '扫描中...' : '开始扫描'"></span>
+              </button>
+              <span class="text-xs text-[var(--text-muted)]">结果会进入独立页面；每页默认勾选建议删除项，处理完再翻下一页。</span>
+            </div>
           </div>
         </div>
-        <details class="more-actions">
-          <summary>更多选择操作</summary>
-          <div class="more-panel">
-            <button class="ghost" onclick="selectRecommendedPage()">本页推荐</button>
-            <button class="ghost" onclick="toggleVisible(true)">本页全选</button>
-            <button class="ghost" onclick="toggleVisible(false)">本页全不选</button>
-            <button class="ghost" onclick="ignoreSelected()">忽略选中</button>
-            <div id="mode_actions" class="row"></div>
+
+        <!-- ══════ RESULTS PAGE ══════ -->
+        <div x-show="activePage === 'results'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-4">
+          <!-- Sticky toolbar -->
+          <div class="glass rounded-xl p-4 sticky top-0 z-10 -mx-4 md:-mx-6 px-4 md:px-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <strong class="text-sm md:text-base" x-text="resultTitle"></strong>
+                <div class="text-xs text-[var(--text-muted)]" x-html="resultMeta"></div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button @click="navigate('scan')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">返回扫描</button>
+                <button @click="prevPage" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">上一页</button>
+                <button @click="nextPage" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">下一页</button>
+                <button @click="deleteSelected" class="rounded-lg px-3 py-1.5 text-xs font-bold bg-[var(--danger)] text-white hover:brightness-110 transition-all">队列删除选中</button>
+              </div>
+            </div>
+            <!-- More actions (collapsible) -->
+            <details class="mt-2 group">
+              <summary class="text-xs text-[var(--text-muted)] font-bold cursor-pointer py-1 list-none flex items-center gap-1 hover:text-[var(--text)] transition-colors">
+                <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                更多选择操作
+              </summary>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <button @click="selectRecommendedPage" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">本页推荐</button>
+                <button @click="toggleVisiblePage(true)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">本页全选</button>
+                <button @click="toggleVisiblePage(false)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">本页全不选</button>
+                <button @click="ignoreSelected" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">忽略选中</button>
+                <template x-if="scanMode === 'av'">
+                  <>
+                    <button @click="selectByTag('tag_c')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">选 [C]</button>
+                    <button @click="selectByTag('tag_crack')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">选破解</button>
+                    <button @click="selectByTag('tag_leak')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">只看/选流出</button>
+                    <button @click="selectByTag('tag_raw')" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">选无标签</button>
+                  </>
+                </template>
+                <template x-if="scanMode === 'smart'">
+                  <>
+                    <button @click="selectResolution(true)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最高分辨率</button>
+                    <button @click="selectResolution(false)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最低分辨率</button>
+                  </>
+                </template>
+                <template x-if="scanMode === 'duration'">
+                  <>
+                    <button @click="selectBySize(false)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最小文件</button>
+                    <button @click="selectBySize(true)" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">保留最大文件</button>
+                  </>
+                </template>
+              </div>
+            </details>
           </div>
-        </details>
-      </div>
-      <div id="result"></div>
-    </section>
 
-    <!-- ===================== TASKS ===================== -->
-    <section id="p-tasks" class="page">
-      <div class="panel">
-        <h2>定时任务</h2>
-        <p class="muted mini">定时执行同步 + 扫描。开启「自动删除」后，扫描命中的推荐删除项会自动入队。</p>
-        <div id="task_list"></div>
-        <button class="ghost" onclick="showTaskForm()" style="margin-top:14px;width:100%">+ 新建任务</button>
-      </div>
-      <div id="task_form_panel" class="panel" style="display:none">
-        <h2 id="task_form_title">新建任务</h2>
-        <label>任务名称</label><input id="task_name" placeholder="每日 AV 查重">
-        <div class="row">
-          <div style="flex:1"><label>扫描模式</label><select id="task_mode"></select></div>
-          <div style="flex:1"><label>Cron 表达式</label><input id="task_cron" placeholder="0 4 * * *"></div>
-        </div>
-        <label>媒体库 (逗号分隔，留空为全部)</label><input id="task_libs" placeholder="留空全部">
-        <div class="row" style="margin-top:10px">
-          <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="task_auto_delete" style="width:auto;min-height:auto"> 自动删除推荐项</label>
-          <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="task_enabled" style="width:auto;min-height:auto" checked> 启用</label>
-        </div>
-        <div class="row" style="margin-top:14px">
-          <button class="primary" onclick="saveTask()">保存任务</button>
-          <button class="ghost" onclick="hideTaskForm()">取消</button>
-        </div>
-      </div>
-    </section>
+          <!-- No results -->
+          <div x-show="!flatItems.length && !loading.scan" class="glass rounded-2xl p-8 text-center text-sm text-[var(--text-muted)]">暂无扫描结果 — 请先在「扫描」页面选择媒体库和模式开始扫描</div>
 
-    <!-- ===================== SETTINGS ===================== -->
-    <section id="p-settings" class="page">
-      <div class="grid two">
-        <div class="panel">
-          <h2>媒体库配置</h2>
-          <label>Emby 地址</label><input id="host" placeholder="http://ip:8096">
-          <label>用户名</label><input id="cfg_user">
-          <label>密码</label><input id="pwd" type="password">
-          <label>通知 Webhook</label><input id="webhook">
-          <label>自动同步元数据 Cron</label><input id="cron_sync" placeholder="0 4 * * *">
-          <p class="muted mini">留空为关闭；示例：<code>0 4 * * *</code> 表示每天 04:00 自动同步。Token 过期后会自动使用存储的密码重新认证。</p>
-          <div class="row" style="margin-top:14px">
-            <button class="primary" onclick="saveConfig()">保存配置</button>
-            <button class="ghost" onclick="testWebhook()">测试 Webhook</button>
-            <button class="ghost" onclick="refreshLibrary()">刷新 Emby 库</button>
+          <!-- Filter bar -->
+          <div x-show="flatItems.length" class="flex flex-wrap gap-2">
+            <template x-for="f in filterOptions" :key="f.key">
+              <button @click="currentFilter = f.key" class="filter-btn text-xs" :class="{ active: currentFilter === f.key }">
+                <span x-text="f.label"></span><span class="ct" x-text="f.count"></span>
+              </button>
+            </template>
           </div>
-          <div class="row" style="margin-top:10px">
-            <button class="ghost" onclick="exportConfig()">导出配置</button>
-            <button class="ghost" onclick="document.getElementById('import-file').click()">导入配置</button>
-            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importConfig(this)">
+
+          <!-- Results list -->
+          <div x-show="flatItems.length" class="space-y-3">
+            <template x-for="(group, gidx) in paginatedGroups" :key="gidx">
+              <div class="group-card">
+                <div @click="toggleGroupItems(group.items.map(i => i.emby_id))" class="flex items-center justify-between px-4 py-3 bg-white/[0.03] cursor-pointer hover:bg-white/[0.06] transition-colors">
+                  <strong class="text-sm truncate" x-text="group.title"></strong>
+                  <span class="text-xs text-[var(--text-muted)] shrink-0 ml-2" x-text="group.items.length + ' 条'"></span>
+                </div>
+                <template x-for="item in group.items" :key="item.emby_id">
+                  <div class="item-row" :class="item.recommend_action === 'review' ? 'item-review' : (item.recommend_action === 'delete' ? 'item-delete' : '')">
+                    <input type="checkbox" :checked="selectedIds.has(item.emby_id)" @change="toggleItem(item.emby_id, $event.target.checked)" class="rounded border-[var(--line)] bg-transparent accent-[var(--primary)]">
+                    <img x-show="item.image_url" :src="item.image_url" loading="lazy" class="poster" @error.once="$el.outerHTML = '<div class=\\'poster no-poster\\'>缺失封面</div>'">
+                    <div x-show="!item.image_url" class="poster no-poster">缺失封面</div>
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <strong class="text-sm" x-text="item.name || item.emby_id" class="truncate"></strong>
+                        <span class="badge" :class="item.recommend_action || 'delete'" x-text="item.recommend_action || '命中'"></span>
+                        <span class="badge rank text-xs"><span x-text="tagText(item)"></span> · 优先级 <span x-text="item.version_rank ?? 0"></span></span>
+                      </div>
+                      <div class="info-grid">
+                        <span class="info-item" x-text="bytes(item.size)"></span>
+                        <span class="info-item" x-text="(item.resolution || '-') + 'P'"></span>
+                        <span class="info-item" x-text="formatDuration(item.duration)"></span>
+                        <span x-show="item.codec" class="info-item" x-text="(item.codec || '').toUpperCase()"></span>
+                        <span x-show="item.audio_codec" class="info-item" x-text="(item.audio_codec || '').toUpperCase()"></span>
+                        <span x-show="item.audio_channels" class="info-item" x-text="channels(item.audio_channels)"></span>
+                        <span x-show="item.bitrate" class="info-item" x-text="Math.round(item.bitrate/1000) + 'kbps'"></span>
+                        <span x-show="item.frame_rate" class="info-item" x-text="item.frame_rate?.toFixed(1) + 'fps'"></span>
+                        <span x-show="item.bit_depth" class="info-item" x-text="item.bit_depth + 'bit'"></span>
+                        <span x-show="item.has_subtitle !== undefined" class="info-item" x-text="item.has_subtitle ? '字幕' : '无字幕'"></span>
+                      </div>
+                      <div x-text="item.path || ''" class="text-xs text-[var(--text-muted)] truncate mt-0.5"></div>
+                      <div x-show="item.recommend_reason" x-text="item.recommend_reason" class="text-xs text-[var(--text-muted)] mt-0.5"></div>
+                    </div>
+                    <div class="flex gap-2 shrink-0 flex-wrap items-start">
+                      <button @click="ignoreOne(item.emby_id)" class="rounded-lg px-2.5 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">忽略</button>
+                      <button @click="deleteOne(item.emby_id)" class="rounded-lg px-2.5 py-1.5 text-xs font-bold bg-[var(--danger)] text-white hover:brightness-110 transition-all">删除</button>
+                      <button @click="openEmby(item.emby_id)" class="rounded-lg px-2.5 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">打开</button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </template>
           </div>
         </div>
-        <div class="panel">
-          <h2>智能处理偏好</h2>
-          <label>番号推荐规则</label><select id="pref_av"><option value="rank">破解-C > C > 破解 > 无标签；流出人工确认</option><option value="tag_uc">选 [UC]</option><option value="tag_c">选 [C]</option><option value="tag_raw">选原版</option></select>
-          <label>同大推荐规则</label><select id="pref_size"><option value="path_long">最长路径</option><option value="path_short">最短路径</option><option value="name_long">最长名称</option><option value="name_short">最短名称</option></select>
-          <label>时长推荐规则</label><select id="pref_duration"><option value="min">选最小文件</option><option value="max">选最大文件</option></select>
-          <label>洗版推荐规则</label><select id="pref_smart"><option value="reso_max">最高分辨率</option><option value="reso_min">最低分辨率</option></select>
-          <label>删除失败自动重试次数</label><input id="pref_retry" type="number" value="3" min="0" max="10">
-          <label style="display:flex;align-items:center;gap:6px;margin-top:12px"><input type="checkbox" id="pref_auto_refresh" style="width:auto;min-height:auto"> 删除后自动刷新 Emby 媒体库</label>
-          <button class="ghost" onclick="saveConfig()" style="margin-top:14px;width:100%">保存偏好</button>
-        </div>
-      </div>
-      <div class="panel">
-        <h2>删除队列</h2>
-        <div id="delete_queue" class="muted">加载中</div>
-        <div class="row" style="margin-top:12px">
-          <button class="ghost" onclick="loadDeleteQueue()">刷新</button>
-          <button class="ghost" onclick="retryFailed()">重试失败项</button>
-          <button class="ghost" onclick="clearDone()">清理已完成</button>
-        </div>
-      </div>
-      <div class="panel"><h2>黑名单管理</h2><div id="ignored" class="muted">加载中</div></div>
-    </section>
 
-    <!-- ===================== STORAGE DASHBOARD ===================== -->
-    <section id="p-storage" class="page">
-      <h1>存储仪表盘</h1>
-      <div class="panel">
-        <h2>按媒体库统计</h2>
-        <div id="storage_list"></div>
-      </div>
-    </section>
+        <!-- ══════ TASKS PAGE ══════ -->
+        <div x-show="activePage === 'tasks'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-5">
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+            <h2 class="text-lg font-bold">定时任务</h2>
+            <p class="text-xs text-[var(--text-muted)]">定时执行同步 + 扫描。开启「自动删除」后，扫描命中的推荐删除项会自动入队。</p>
+            <div x-show="loading.tasks" class="space-y-2">
+              <template x-for="i in 3" :key="i"><div class="skeleton h-12 w-full"></div></template>
+            </div>
+            <div x-show="!loading.tasks" class="space-y-2">
+              <template x-for="t in tasks" :key="t.id">
+                <div class="flex items-center justify-between py-2.5 border-b border-[var(--line)] last:border-0">
+                  <div class="min-w-0 flex-1">
+                    <strong class="text-sm" x-text="t.name"></strong>
+                    <div class="text-xs text-[var(--text-muted)]">
+                      <span x-text="t.mode"></span> · <span x-text="t.cron"></span> · <span x-text="t.enabled ? '启用' : '停用'"></span>
+                      <span x-show="t.auto_delete"> · 自动删除</span>
+                      <span x-show="t.last_message" class="block truncate" x-text="t.last_message"></span>
+                    </div>
+                  </div>
+                  <div class="flex gap-1.5 shrink-0 ml-3">
+                    <button @click="runTask(t.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">执行</button>
+                    <button @click="editTask(t.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">编辑</button>
+                    <button @click="delTask(t.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold bg-[var(--danger)] text-white hover:brightness-110 transition-all">删</button>
+                  </div>
+                </div>
+              </template>
+              <div x-show="!tasks.length" class="text-sm text-[var(--text-muted)] py-2">暂无定时任务</div>
+            </div>
+            <button @click="showTaskForm()" class="w-full rounded-xl py-2.5 text-sm font-bold border border-dashed border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">+ 新建任务</button>
+          </div>
 
-    <!-- ===================== LOGS ===================== -->
-    <section id="p-logs" class="page">
-      <div class="toolbar"><h1>系统日志</h1><button class="ghost" onclick="clearLogs()">清空</button></div>
-      <div id="logs" class="log"></div>
-    </section>
-  </main>
+          <!-- Task form -->
+          <div x-show="taskFormOpen" class="glass rounded-2xl p-5 md:p-6 space-y-4 transition-all">
+            <h2 class="text-lg font-bold" x-text="taskEditId ? '编辑任务' : '新建任务'"></h2>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">任务名称</label>
+              <input x-model="taskForm.name" placeholder="每日 AV 查重" class="text-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">扫描模式</label>
+                <select x-model="taskForm.mode" class="text-sm">
+                  <template x-for="[id, label] in modes" :key="id">
+                    <option :value="id" x-text="label"></option>
+                  </template>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Cron 表达式</label>
+                <input x-model="taskForm.cron" placeholder="0 4 * * *" class="text-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">媒体库 (逗号分隔，留空为全部)</label>
+              <input x-model="taskForm.libraries" placeholder="留空全部" class="text-sm">
+            </div>
+            <div class="flex items-center gap-6">
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" x-model="taskForm.auto_delete" class="rounded border-[var(--line)] accent-[var(--primary)]" style="width:auto;min-height:auto">
+                <span>自动删除推荐项</span>
+              </label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" x-model="taskForm.enabled" class="rounded border-[var(--line)] accent-[var(--primary)]" style="width:auto;min-height:auto">
+                <span>启用</span>
+              </label>
+            </div>
+            <div class="flex gap-3 pt-1">
+              <button @click="saveTask" :disabled="loading.saveTask" class="rounded-xl py-2.5 px-5 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2">
+                <span x-show="loading.saveTask" class="spinner"></span>
+                <span>保存任务</span>
+              </button>
+              <button @click="taskFormOpen = false" class="rounded-xl py-2.5 px-5 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════ SETTINGS PAGE ══════ -->
+        <div x-show="activePage === 'settings'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter grid md:grid-cols-2 gap-5">
+          <!-- Emby Config -->
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+            <h2 class="text-lg font-bold">媒体库配置</h2>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Emby 地址</label>
+              <input x-model="form.host" placeholder="http://ip:8096" class="text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">用户名</label>
+              <input x-model="form.user" class="text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">密码</label>
+              <input type="password" x-model="form.pwd" class="text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">通知 Webhook</label>
+              <input x-model="form.webhook" class="text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">自动同步元数据 Cron</label>
+              <input x-model="form.cron_sync" placeholder="0 4 * * *" class="text-sm">
+              <p class="text-xs text-[var(--text-muted)] mt-1">留空为关闭；示例：<code class="text-[var(--primary)]">0 4 * * *</code> 表示每天 04:00 自动同步。Token 过期后会自动使用存储的密码重新认证。</p>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button @click="saveConfig" :disabled="loading.saveConfig" class="rounded-xl py-2 px-4 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2">
+                <span x-show="loading.saveConfig" class="spinner"></span>
+                <span>保存配置</span>
+              </button>
+              <button @click="testWebhook" class="rounded-xl py-2 px-4 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">测试 Webhook</button>
+              <button @click="refreshLibrary" class="rounded-xl py-2 px-4 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">刷新 Emby 库</button>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button @click="exportConfig" class="rounded-xl py-2 px-4 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">导出配置</button>
+              <button @click="$refs.importFile.click()" class="rounded-xl py-2 px-4 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">导入配置</button>
+              <input type="file" accept=".json" x-ref="importFile" @change="importConfig" class="hidden">
+            </div>
+          </div>
+
+          <!-- Preferences -->
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+            <h2 class="text-lg font-bold">智能处理偏好</h2>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">番号推荐规则</label>
+              <select x-model="prefs.av_keep_priority" class="text-sm">
+                <option value="rank">破解-C > C > 破解 > 无标签；流出人工确认</option>
+                <option value="tag_uc">选 [UC]</option>
+                <option value="tag_c">选 [C]</option>
+                <option value="tag_raw">选原版</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">同大推荐规则</label>
+              <select x-model="prefs.size_keep" class="text-sm">
+                <option value="path_long">最长路径</option>
+                <option value="path_short">最短路径</option>
+                <option value="name_long">最长名称</option>
+                <option value="name_short">最短名称</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长推荐规则</label>
+              <select x-model="prefs.duration_keep" class="text-sm">
+                <option value="min">选最小文件</option>
+                <option value="max">选最大文件</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">洗版推荐规则</label>
+              <select x-model="prefs.smart_keep" class="text-sm">
+                <option value="reso_max">最高分辨率</option>
+                <option value="reso_min">最低分辨率</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">删除失败自动重试次数</label>
+              <input type="number" x-model.number="prefs.delete_retry_max" min="0" max="10" class="text-sm">
+            </div>
+            <label class="flex items-center gap-2 text-sm cursor-pointer pt-1">
+              <input type="checkbox" x-model="prefs.auto_refresh_library" class="rounded border-[var(--line)] accent-[var(--primary)]" style="width:auto;min-height:auto">
+              <span>删除后自动刷新 Emby 媒体库</span>
+            </label>
+            <button @click="saveConfig" class="w-full rounded-xl py-2 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">保存偏好</button>
+          </div>
+
+          <!-- Delete Queue -->
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
+            <h2 class="text-lg font-bold">删除队列</h2>
+            <div x-show="loading.deleteQueue" class="skeleton h-16 w-full"></div>
+            <div x-show="!loading.deleteQueue" class="space-y-1">
+              <div class="flex flex-wrap gap-1.5 mb-2">
+                <template x-for="(v, k) in deleteQueue.counts" :key="k">
+                  <span class="tag-pill" :class="k" x-text="k + ': ' + v"></span>
+                </template>
+              </div>
+              <template x-for="item in deleteQueue.items" :key="item.emby_id || item.name">
+                <div class="flex items-center justify-between py-1.5 text-sm border-b border-[var(--line)] last:border-0">
+                  <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <span class="tag-pill shrink-0" :class="item.status" x-text="item.status"></span>
+                    <span x-text="item.name || item.emby_id" class="truncate"></span>
+                    <span x-show="item.error" class="text-xs text-[var(--danger)] truncate" x-text="item.error"></span>
+                    <span x-show="item.retry_count" class="text-xs text-[var(--text-muted)]" x-text="'重试' + item.retry_count"></span>
+                  </div>
+                  <span class="text-xs text-[var(--text-muted)] shrink-0 ml-2" x-text="formatTime(item.finished_at || item.started_at || item.created_at)"></span>
+                </div>
+              </template>
+              <div x-show="!deleteQueue.items?.length" class="text-sm text-[var(--text-muted)] py-2">队列为空</div>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <button @click="loadDeleteQueue" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">刷新</button>
+              <button @click="retryFailed" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">重试失败项</button>
+              <button @click="clearDone" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">清理已完成</button>
+            </div>
+          </div>
+
+          <!-- Ignore List -->
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
+            <h2 class="text-lg font-bold">黑名单管理</h2>
+            <div x-show="loading.ignored" class="skeleton h-12 w-full"></div>
+            <div x-show="!loading.ignored" class="space-y-1">
+              <template x-for="item in ignoredItems" :key="item.id">
+                <div class="flex items-center justify-between py-1.5 text-sm border-b border-[var(--line)] last:border-0">
+                  <span><span x-text="item.mode" class="font-medium"></span> · <span x-text="item.name || item.group_key || item.emby_id"></span></span>
+                  <button @click="removeIgnored(item.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold text-[var(--danger)] border border-[var(--danger)] hover:brightness-110 transition-all">恢复</button>
+                </div>
+              </template>
+              <div x-show="!ignoredItems.length" class="text-sm text-[var(--text-muted)] py-2">无黑名单</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════ STORAGE PAGE ══════ -->
+        <div x-show="activePage === 'storage'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-5">
+          <h1 class="text-xl font-black">存储仪表盘</h1>
+          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+            <h2 class="text-lg font-bold">按媒体库统计</h2>
+            <div x-show="loading.storage" class="space-y-3">
+              <template x-for="i in 4" :key="i"><div class="skeleton h-16 w-full"></div></template>
+            </div>
+            <div x-show="!loading.storage" class="space-y-3">
+              <template x-for="stat in storageStats" :key="stat.library_id || stat.library_name">
+                <div class="space-y-1">
+                  <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm" x-text="stat.library_name || stat.library_id"></span>
+                    <strong class="text-sm" x-text="bytes(stat.total_size)"></strong>
+                  </div>
+                  <div class="text-xs text-[var(--text-muted)]" x-text="stat.item_count + ' 条 · 无封面 ' + (stat.no_poster || 0) + ' · 无时长 ' + (stat.no_duration || 0)"></div>
+                  <div class="prog-bar"><div class="prog-fill" :style="'width:' + storageBarPct(stat.total_size) + '%'"></div></div>
+                </div>
+              </template>
+              <div x-show="!storageStats.length" class="text-sm text-[var(--text-muted)] py-4 text-center">暂无数据，请先同步</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════ LOGS PAGE ══════ -->
+        <div x-show="activePage === 'logs'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-3" x-transition:enter-end="opacity-100 translate-y-0" class="page-enter space-y-4">
+          <div class="flex items-center justify-between">
+            <h1 class="text-xl font-black">系统日志</h1>
+            <button @click="clearLogs" class="rounded-lg px-3 py-1.5 text-xs font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">清空</button>
+          </div>
+          <div x-ref="logViewer" class="log-viewer">
+            <template x-for="(line, i) in logLines" :key="i">
+              <div x-text="line"></div>
+            </template>
+            <div x-show="!logLines.length" class="text-[var(--text-muted)] text-center py-8">暂无日志</div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ─── MOBILE BOTTOM NAV ─── -->
+    <nav class="fixed bottom-0 left-0 right-0 z-30 md:hidden glass-strong px-2 py-1 flex justify-around">
+      <template x-for="item in navItems" :key="item.id">
+        <button @click="navigate(item.id); sidebarOpen = false"
+                class="flex flex-col items-center py-1.5 px-2 rounded-lg transition-colors min-w-0"
+                :class="activePage === item.id ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'">
+          <span class="text-lg" x-text="item.icon"></span>
+          <span class="text-[10px] font-semibold mt-0.5" x-text="item.label"></span>
+        </button>
+      </template>
+    </nav>
+  </div>
 
   <script>
-    const $=id=>document.getElementById(id);
-    function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-    const modes=[
-      ['av','🔞 番号查重'],['smart','🧠 智能洗版'],['size','⚖️ 同大查重'],['duration','⏳ 时长查重'],
-      ['noposter','🖼️ 缺失封面'],['tiny','🐜 极小文件'],
-      ['nometa','📋 无元数据'],['nosub','💬 无字幕'],['emptylib','📂 空库检测']
-    ];
-    const modeSelectOpts=modes.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
-    let state={mode:'av',libs:new Set(),libraries:[],data:[],flat:[],selected:new Set(),reviewed:new Set(),config:{},page:1,pageSize:100,active:'clean',taskEditId:null,filter:'all'};
-    let pollTimer=null;
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('app', () => ({
+        // ── State ──
+        sidebarOpen: false,
+        activePage: 'scan',
+        toasts: [],
+        toastCounter: 0,
 
-    function nav(name,btn){document.body.dataset.page=name;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p-'+name).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');state.active=name;if(name==='settings'){loadConfig();loadIgnored();loadDeleteQueue()}if(name==='logs')loadLogs();if(name==='storage')loadStorage();if(name==='tasks')loadTasks()}
-    function navByName(name){const map={'clean':'扫描','results':'结果','tasks':'任务','settings':'配置','storage':'存储','logs':'日志'};const btn=[...document.querySelectorAll('.nav button')].find(b=>b.textContent.includes(map[name]||name));nav(name,btn)}
-    function bytes(n){n=Number(n||0);const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return `${n.toFixed(i?1:0)} ${u[i]}`}
-    function note(msg){$('sync_detail').textContent=msg}
+        status: {},
+        libraries: [],
+        selectedLibs: new Set(),
+        scanMode: 'av',
+        scanParams: { param_s: '100', duration_scope: 'dir', duration_precision: 'second', page_size: 100 },
 
-    async function poll(){try{const r=await fetch('/api/status');if(!r.ok)throw new Error('HTTP '+r.status);const s=await r.json();$('server').textContent=s.server_name||'-';$('ver').textContent=s.server_ver||'-';$('user').textContent=s.user_name||'-';$('cache').textContent=s.media_cache??s.local_cache??0;$('expected').textContent=`${s.media_cache??0} / ${s.library_expected||0}`;$('total_storage').textContent=bytes(s.total_storage||0);$('cleaned').textContent=s.cleaned_count||0;$('saved').textContent=bytes(s.saved_space||0);$('ready').innerHTML=s.connected?'<span class="ok">已连接</span>':'未连接';$('sync_detail').textContent=s.is_deleting?`删除中：${s.delete_current||0}/${s.delete_total||0}（失败 ${s.delete_failed||0}）`:(s.is_syncing?`同步中：${s.sync_lib||'-'} · ${s.sync_current||0}/${s.sync_expected||0} · 累计 ${s.sync_total||0}`:(s.last_log||''));if(state.active==='logs')loadLogs(false);if(state.active==='storage')loadStorage(false)}catch{}}
+        scanData: [],
+        flatItems: [],
+        selectedIds: new Set(),
+        reviewedIds: new Set(),
+        resultPage: 1,
+        currentFilter: 'all',
 
-    // ---- Config ----
-    async function loadConfig(){const c=await(await fetch('/api/config')).json();state.config=c;$('host').value=c.host||'';$('cfg_user').value=c.user||'';$('webhook').value=c.webhook||'';$('cron_sync').value=c.cron_sync||'';const p=c.prefs||{};$('pref_av').value=p.av_keep_priority||'rank';$('pref_size').value=p.size_keep||'path_long';$('pref_duration').value=p.duration_keep||'min';$('pref_smart').value=p.smart_keep||'reso_max';$('pref_retry').value=p.delete_retry_max??3;$('pref_auto_refresh').checked=p.auto_refresh_library!==false}
-    async function saveConfig(){const payload={host:$('host').value,user:$('cfg_user').value,pwd:$('pwd').value,webhook:$('webhook').value,cron_sync:$('cron_sync').value,prefs:{av_keep_priority:$('pref_av').value,size_keep:$('pref_size').value,duration_keep:$('pref_duration').value,smart_keep:$('pref_smart').value,duration_scope:$('duration_scope').value,duration_precision:$('duration_precision').value,confirm_batch:'true',auto_refresh_library:$('pref_auto_refresh').checked,delete_retry_max:Number($('pref_retry').value||3)}};const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(!r.ok){note(await r.text());return}$('pwd').value='';await init();note('配置已保存')}
-    async function testWebhook(){const r=await fetch('/api/test_webhook',{method:'POST'});const d=await r.json();note(d.message||'已发送')}
-    async function refreshLibrary(){await fetch('/api/refresh-library',{method:'POST'});note('Emby 全库刷新已触发')}
-    async function exportConfig(){const r=await fetch('/api/config/export');const d=await r.json();const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`emby-clean-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();note('配置已导出')}
-    async function importConfig(input){const file=input.files[0];if(!file)return;const text=await file.text();try{const payload=JSON.parse(text);const r=await fetch('/api/config/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(d.status==='ok'){note('配置导入成功！正在刷新...');setTimeout(()=>location.reload(),1500)}else{note(d.detail||'导入失败')}}catch(e){note('文件格式错误：'+e.message)}input.value=''}
+        tasks: [],
+        taskFormOpen: false,
+        taskEditId: null,
+        taskForm: { name: '', mode: 'av', cron: '0 4 * * *', libraries: '', auto_delete: false, enabled: true },
 
-    // ---- Libraries ----
-    async function loadLibraries(){const box=$('libs');box.innerHTML='<span class="muted">加载中</span>';try{state.libraries=await(await fetch('/api/libraries')).json();box.innerHTML=state.libraries.map(x=>`<div class="lib-card ${state.libs.has(x.Id)?'active':''}" data-lib="${esc(x.Id)}" onclick="toggleLib('${esc(x.Id)}',this)"><img class="lib-card-img" src="/emby-lib-image/${encodeURIComponent(x.Id)}" loading="lazy" onerror="this.style.display='none'"><div class="lib-card-body"><strong>${esc(x.Name)}</strong><small class="muted">${esc(x.CollectionType||'')} · ${x.CachedCount??0}/${x.ItemCount??0} 条</small></div></div>`).join('')||'<span class="muted">无媒体库</span>'}catch{box.innerHTML='<span class="muted">请先保存 Emby 配置</span>'}}
-    function resetSelection(){state.selected.clear();state.reviewed.clear();state.flat=[];state.data=[];state.page=1;state.filter='all';renderResults()}function toggleLib(id,el){state.libs.has(id)?state.libs.delete(id):state.libs.add(id);el.classList.toggle('active');resetSelection()}
-    function toggleAllLibs(){const all=state.libraries.map(x=>x.Id);const on=state.libs.size!==all.length;state.libs=new Set(on?all:[]);state.selected.clear();state.reviewed.clear();state.flat=[];state.data=[];state.page=1;state.filter='all';loadLibraries();renderResults()}
-    function renderModes(){$('modes').innerHTML=modes.map(([id,name])=>`<div class="chip ${id===state.mode?'active':''}" onclick="setMode('${id}',this)">${name}</div>`).join('');$('task_mode').innerHTML=modeSelectOpts}
-    function setMode(id,el){state.mode=id;document.querySelectorAll('#modes .chip').forEach(x=>x.classList.remove('active'));el.classList.add('active');state.selected.clear();state.reviewed.clear();state.flat=[];state.data=[];state.page=1;state.filter='all';renderModeActions();renderResults()}
-    function renderModeActions(){let h='<button class="ghost" onclick="selectRecommendedPage()">本页推荐</button>';if(state.mode==='av')h+=`<button class="ghost" onclick="selectByTag('tag_c')">选 [C]</button><button class="ghost" onclick="selectByTag('tag_crack')">选破解</button><button class="ghost" onclick="selectByTag('tag_leak')">只看/选流出</button><button class="ghost" onclick="selectByTag('tag_raw')">选无标签</button>`;if(state.mode==='smart')h+=`<button class="ghost" onclick="selectResolution(true)">保留最高分辨率</button><button class="ghost" onclick="selectResolution(false)">保留最低分辨率</button>`;if(state.mode==='duration')h+=`<button class="ghost" onclick="selectBySize(false)">保留最小文件</button><button class="ghost" onclick="selectBySize(true)">保留最大文件</button>`;$('mode_actions').innerHTML=h}
+        form: { host: '', user: '', pwd: '', webhook: '', cron_sync: '' },
+        prefs: {
+          av_keep_priority: 'rank', size_keep: 'path_long', duration_keep: 'min', smart_keep: 'reso_max',
+          delete_retry_max: 3, auto_refresh_library: true,
+          duration_scope: 'dir', duration_precision: 'second', confirm_batch: 'true'
+        },
 
-    // ---- Sync ----
-    async function syncNow(){await fetch('/api/sync',{method:'POST'});note('同步已开始，日志会自动更新');navByName('logs')}
+        deleteQueue: { counts: {}, items: [] },
+        ignoredItems: [],
+        storageStats: [],
+        logLines: [],
+        wsConnected: false,
+        wsReconnectTimer: null,
 
-    // ---- Scan ----
-    async function scan(){state.pageSize=Number($('page_size').value||100);$('result').innerHTML='<div class="panel muted">扫描中...</div>';navByName('results');try{const url=`/api/scan?mode=${state.mode}&lib=${[...state.libs].join(',')}&param_s=${$('param_s').value}&duration_scope=${$('duration_scope').value}&duration_precision=${$('duration_precision').value}`;const r=await fetch(url);if(!r.ok){$('result').innerHTML=`<div class="panel" style="color:var(--danger)">扫描失败：HTTP ${r.status}</div>`;return}state.data=await r.json();state.flat=state.data.flatMap(g=>g.items.map(i=>({...i,groupTitle:g.title,groupItems:g.items.map(x=>x.emby_id)})));state.page=1;state.reviewed=new Set();state.selected=new Set();selectRecommendedAll();autoMarkReviewed();renderResults()}catch(e){$('result').innerHTML=`<div class="panel" style="color:var(--danger)">扫描出错：${esc(e.message)}</div>`}}
-    function visible(){if(!state.flat.length)return[];const start=(state.page-1)*state.pageSize;let end=start+state.pageSize;if(state.flat[end]&&state.flat[end].groupTitle===state.flat[end-1].groupTitle){while(end<state.flat.length&&state.flat[end].groupTitle===state.flat[end-1].groupTitle)end++}return state.flat.slice(start,end)}
-    function pageCount(){return Math.max(1,Math.ceil(state.flat.length/state.pageSize))}
-    function renderResults(){const vis=visibleFiltered();const reviewCount=vis.filter(i=>i.recommend_action==='review').length;const deleteCount=vis.filter(i=>i.recommend_action==='delete').length;const keepCount=vis.filter(i=>i.recommend_action==='keep').length;$('result_title').textContent=state.flat.length?`扫描结果：${state.data.length} 组 / ${state.flat.length} 条`:'暂无扫描结果';$('result_meta').textContent=`第 ${state.page} / ${pageCount()} 页，本页 ${vis.length} 条，本页已选 ${selectedVisibleIds().length} 条`;$('result_meta').innerHTML+=reviewCount?` <span class="review-count">⚠ ${reviewCount} 待确认</span>`:'';if(!state.flat.length){$('result').innerHTML='<div class="panel muted">没有命中结果</div>';return}let html=renderFilterBar(vis.length,reviewCount,deleteCount,keepCount);let last='';for(const i of vis){if(i.groupTitle!==last){if(last)html+='</div>';const ids=vis.filter(x=>x.groupTitle===i.groupTitle).map(x=>x.emby_id).join(',');html+=`<div class="group"><div class="group-head" onclick="toggleGroup('${esc(ids)}')"><strong>${esc(i.groupTitle)}</strong><span class="muted">${ids.split(',').length} 条</span></div>`;last=i.groupTitle}html+=itemHtml(i)}if(last)html+='</div>';$('result').innerHTML=html}
-    function renderFilterBar(totalCount,reviewCount,deleteCount,keepCount){return `<div class="filter-bar"><button class="filter-btn ${state.filter==='all'?'active':''}" onclick="setFilter('all')">全部<span class="count">${totalCount}</span></button>${reviewCount?`<button class="filter-btn ${state.filter==='review'?'active':''}" onclick="setFilter('review')">⚠ 待确认<span class="count">${reviewCount}</span></button>`:''}${deleteCount?`<button class="filter-btn ${state.filter==='delete'?'active':''}" onclick="setFilter('delete')">删除<span class="count">${deleteCount}</span></button>`:''}${keepCount?`<button class="filter-btn ${state.filter==='keep'?'active':''}" onclick="setFilter('keep')">保留<span class="count">${keepCount}</span></button>`:''}</div>`}
-    function setFilter(f){state.filter=f;renderResults()}
-    function visibleFiltered(){const vis=visible();if(state.filter==='all')return vis;return vis.filter(i=>i.recommend_action===state.filter)}
-    function autoMarkReviewed(){state.flat.forEach(i=>{if(i.recommend_action==='review')state.reviewed.add(i.emby_id)})}
-    function selectRecommendedAll(){state.flat.forEach(i=>{if(i.recommend_action==='delete')state.selected.add(i.emby_id);else state.selected.delete(i.emby_id)})}
-    function itemHtml(i){const img=i.image_url?`<img class="poster" src="${esc(i.image_url)}" loading="lazy">`:`<div class="poster no-poster">缺失封面</div>`;const tags=[i.tag_leak?'流出':'',i.tag_crack?'破解':'',i.tag_c?'C':'',i.tag_uc?'UC':'',i.tag_u?'U':''].filter(Boolean).join(' · ')||'无标签';const cls=i.recommend_action==='review'?'item review-item':(i.recommend_action==='delete'?'item delete-item':'item');const dur=i.duration?formatDuration(i.duration):'-';const br=i.bitrate?`${Math.round(i.bitrate/1000)}kbps`:'';const codec=i.codec?i.codec.toUpperCase():'';const acodec=i.audio_codec?i.audio_codec.toUpperCase():'';const ch=i.audio_channels?{2:'2.0',6:'5.1',8:'7.1'}[i.audio_channels]||`${i.audio_channels}ch`:'';const sub=i.has_subtitle?'字幕':(i.has_subtitle===0?'无字幕':'');const fps=i.frame_rate?`${i.frame_rate.toFixed(1)}fps`:'';const depth=i.bit_depth?`${i.bit_depth}bit`:'';const infoParts=[`${bytes(i.size)}`,`${i.resolution||'-'}P`,dur,codec,acodec,ch,br,fps,depth,sub].filter(Boolean);return `<div class="${cls}"><input type="checkbox" ${state.selected.has(i.emby_id)?'checked':''} onchange="toggleItem('${esc(i.emby_id)}',this.checked)">${img}<div><strong>${esc(i.name||i.emby_id)}</strong> <span class="badge ${esc(i.recommend_action)}">${esc(i.recommend_action||'命中')}</span> <span class="badge rank">${esc(tags)} · 优先级 ${i.version_rank||0}</span><div class="info-grid">${infoParts.map(p=>`<span class="info-item">${esc(p)}</span>`).join('')}</div><small>${esc(i.path||'')}</small><small>${esc(i.recommend_reason||'')}</small></div><div class="row"><button class="ghost" onclick="ignoreOne('${esc(i.emby_id)}')">忽略</button><button class="danger" onclick="deleteOne('${esc(i.emby_id)}')">删除</button><button class="ghost" onclick="window.open('${esc(state.config.host||'')}/web/index.html#!/item?id=${encodeURIComponent(i.emby_id)}','_blank')">打开</button></div></div>`}
-    function formatDuration(s){s=Math.round(s);if(s<60)return s+'s';const m=Math.floor(s/60);const sec=s%60;if(m<60)return m+':'+String(sec).padStart(2,'0');const h=Math.floor(m/60);return h+':'+String(m%60).padStart(2,'0')}
-    function toggleItem(id,on){on?state.selected.add(id):state.selected.delete(id);updateMeta()}function toggleGroup(ids){const arr=ids.split(',').filter(Boolean);const all=arr.every(id=>state.selected.has(id));arr.forEach(id=>all?state.selected.delete(id):state.selected.add(id));updateMeta()}function toggleVisible(on){visible().forEach(i=>on?state.selected.add(i.emby_id):state.selected.delete(i.emby_id));updateMeta()}function updateMeta(){const vis=visibleFiltered();const reviewCount=vis.filter(i=>i.recommend_action==='review').length;$('result_meta').textContent=`第 ${state.page} / ${pageCount()} 页，本页 ${vis.length} 条，本页已选 ${selectedVisibleIds().length} 条`;$('result_meta').innerHTML+=reviewCount?` <span class="review-count">⚠ ${reviewCount} 待确认</span>`:''}
-    function selectRecommendedPage(render=true){visible().forEach(i=>{if(i.recommend_action==='delete')state.selected.add(i.emby_id);else state.selected.delete(i.emby_id)});if(render)renderResults()}function prevPage(){if(state.page>1){state.page--;renderResults()}}function nextPage(){if(state.page<pageCount()){state.page++;renderResults()}}
-    function selectByTag(tag){visible().forEach(i=>{const match=tag==='tag_raw'?!i.tag_c&&!i.tag_uc&&!i.tag_u&&!i.tag_crack&&!i.tag_leak:i[tag];if(match)state.selected.add(i.emby_id);else state.selected.delete(i.emby_id)});renderResults()}function selectResolution(highest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(highest?i.resolution>b.resolution:i.resolution<b.resolution)?i:b,null))}function selectBySize(largest){selectKeepPerGroup(items=>items.reduce((b,i)=>!b||(largest?i.size>b.size:i.size<b.size)?i:b,null))}function selectKeepPerGroup(picker){const groups={};visible().forEach(i=>(groups[i.groupTitle]??=[]).push(i));Object.values(groups).forEach(items=>{const keep=picker(items);items.forEach(i=>{if(!keep||i.emby_id!==keep.emby_id)state.selected.add(i.emby_id);else state.selected.delete(i.emby_id)})});renderResults()}
-    async function ignoreOne(id){await postIds('/api/ignore',{ids:[id],mode:state.mode})}async function deleteOne(id){if(!confirm(`确认删除 ${id}？`))return;await postIds('/api/delete',{ids:[id]})}async function ignoreSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}await postIds('/api/ignore',{ids,mode:state.mode})}function selectedVisibleIds(){const visibleIds=new Set(visible().map(i=>i.emby_id));return [...state.selected].filter(id=>visibleIds.has(id))}async function deleteSelected(){const ids=selectedVisibleIds();if(!ids.length){note('当前页未选择条目');return}if(!confirm(`确认将当前页选中的 ${ids.length} 条加入删除队列？`))return;await postIds('/api/delete',{ids})}
-    async function postIds(url,payload){const ids=new Set(payload.ids||[]);if(!ids.size){note('当前页未选择条目');return}const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(!r.ok){note(d.detail||d.message||'操作失败');return}note(d.message||'操作已提交');state.flat=state.flat.filter(i=>!ids.has(i.emby_id));state.data=state.data.map(g=>({...g,items:g.items.filter(i=>!ids.has(i.emby_id))})).filter(g=>g.items.length);ids.forEach(id=>state.selected.delete(id));state.page=Math.min(state.page,pageCount());renderResults();loadLogs()}
+        loading: { libraries: false, scan: false, tasks: false, saveTask: false, saveConfig: false, deleteQueue: false, ignored: false, storage: false },
 
-    // ---- Delete queue ----
-    async function loadDeleteQueue(){try{const d=await(await fetch('/api/delete-queue')).json();const c=d.counts||{};const summary=Object.entries(c).map(([k,v])=>`<span class="tag ${esc(k)}">${esc(k)}: ${v}</span>`).join('');const items=(d.items||[]).map(r=>{const t=r.status;const time=r.finished_at||r.started_at||r.created_at;return `<div class="stat"><span><span class="tag ${esc(t)}">${esc(t)}</span> ${esc(r.name||r.emby_id)}${r.error?' · '+esc(r.error):''}${r.retry_count?` · 重试${r.retry_count}`:''}</span><strong>${time?new Date(time*1000).toLocaleTimeString():''}</strong></div>`}).join('');$('delete_queue').innerHTML=summary+items||'队列为空'}catch{$('delete_queue').textContent='加载失败'}}
-    async function retryFailed(){const r=await fetch('/api/delete-queue/retry',{method:'POST'});const d=await r.json();note(`已重试 ${d.retried||0} 条`);loadDeleteQueue()}
-    async function clearDone(){const r=await fetch('/api/delete-queue/clear',{method:'POST'});const d=await r.json();note(`已清理 ${d.cleared||0} 条`);loadDeleteQueue()}
+        modes: [
+          ['av','🔞 番号查重'], ['smart','🧠 智能洗版'], ['size','⚖️ 同大查重'], ['duration','⏳ 时长查重'],
+          ['noposter','🖼️ 缺失封面'], ['tiny','🐜 极小文件'],
+          ['nometa','📋 无元数据'], ['nosub','💬 无字幕'], ['emptylib','📂 空库检测']
+        ],
+        navItems: [
+          { id: 'scan', label: '扫描', icon: '🔍' },
+          { id: 'results', label: '结果', icon: '📋' },
+          { id: 'tasks', label: '任务', icon: '⏰' },
+          { id: 'settings', label: '配置', icon: '⚙️' },
+          { id: 'storage', label: '存储', icon: '💾' },
+          { id: 'logs', label: '日志', icon: '📄' }
+        ],
 
-    // ---- Tasks ----
-    async function loadTasks(){try{const tasks=await(await fetch('/api/tasks')).json();$('task_list').innerHTML=tasks.map(t=>`<div class="stat"><span><strong>${esc(t.name)}</strong><br><span class="muted mini">${esc(t.mode)} · ${esc(t.cron)} · ${t.enabled?'启用':'停用'} ${t.auto_delete?'· 自动删除':''}<br>${esc(t.last_message||'')}</span></span><span><button class="ghost mini" onclick="runTask(${t.id})">执行</button> <button class="ghost mini" onclick="editTask(${t.id})">编辑</button> <button class="danger mini" onclick="delTask(${t.id})">删</button></span></div>`).join('')||'<span class="muted">暂无定时任务</span>'}catch{$('task_list').innerHTML='加载失败'}}
-    function showTaskForm(t){$('task_form_panel').style.display='block';$('task_form_title').textContent='新建任务';state.taskEditId=null;$('task_name').value='';$('task_cron').value='0 4 * * *';$('task_libs').value='';$('task_auto_delete').checked=false;$('task_enabled').checked=true;$('task_mode').value='av'}
-    function hideTaskForm(){$('task_form_panel').style.display='none'}
-    function editTask(id){fetch('/api/tasks').then(r=>r.json()).then(tasks=>{const t=tasks.find(x=>x.id===id);if(!t)return;$('task_form_panel').style.display='block';$('task_form_title').textContent='编辑任务';state.taskEditId=id;$('task_name').value=t.name;$('task_cron').value=t.cron;$('task_libs').value=t.libraries;$('task_auto_delete').checked=!!t.auto_delete;$('task_enabled').checked=!!t.enabled;$('task_mode').value=t.mode})}
-    async function saveTask(){const payload={name:$('task_name').value,mode:$('task_mode').value,cron:$('task_cron').value,libraries:$('task_libs').value,auto_delete:$('task_auto_delete').checked,enabled:$('task_enabled').checked};const url=state.taskEditId?`/api/tasks/${state.taskEditId}`:'/api/tasks';const method=state.taskEditId?'PUT':'POST';const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});if(r.ok){hideTaskForm();loadTasks();note('任务已保存')}}
-    async function runTask(id){await fetch(`/api/tasks/${id}/run`,{method:'POST'});note('任务已触发执行')}
-    async function delTask(id){if(!confirm('确认删除此任务？'))return;await fetch(`/api/tasks/${id}`,{method:'DELETE'});loadTasks()}
+        // ── Computed ──
+        get syncDetailText() {
+          const s = this.status;
+          if (s.is_deleting) return `删除中：${s.delete_current || 0}/${s.delete_total || 0}（失败 ${s.delete_failed || 0}）`;
+          if (s.is_syncing) return `同步中：${s.sync_lib || '-'} · ${s.sync_current || 0}/${s.sync_expected || 0} · 累计 ${s.sync_total || 0}`;
+          return s.last_log || '';
+        },
+        get resultTitle() {
+          if (!this.flatItems.length) return '暂无扫描结果';
+          return `扫描结果：${this.scanData.length} 组 / ${this.flatItems.length} 条`;
+        },
+        get resultMeta() {
+          if (!this.flatItems.length) return '';
+          const vis = this.visibleFiltered();
+          const rc = vis.filter(i => i.recommend_action === 'review').length;
+          let html = `第 ${this.resultPage} / ${this.pageCount()} 页，本页 ${vis.length} 条，本页已选 ${this.selectedVisibleIds().length} 条`;
+          if (rc) html += ` <span class="review-count" style="display:inline-flex;align-items:center;gap:0.25rem;background:rgba(255,209,102,0.15);color:var(--warn);padding:0.125rem 0.5rem;border-radius:0.25rem;font-size:0.75rem;font-weight:700;">⚠ ${rc} 待确认</span>`;
+          return html;
+        },
+        get filterOptions() {
+          if (!this.flatItems.length) return [];
+          const vis = this.visible();
+          const all = vis.length;
+          const del = vis.filter(i => i.recommend_action === 'delete').length;
+          const rev = vis.filter(i => i.recommend_action === 'review').length;
+          const keep = vis.filter(i => i.recommend_action === 'keep').length;
+          const opts = [{ key: 'all', label: '全部', count: all }];
+          if (rev) opts.push({ key: 'review', label: '⚠ 待确认', count: rev });
+          if (del) opts.push({ key: 'delete', label: '删除', count: del });
+          if (keep) opts.push({ key: 'keep', label: '保留', count: keep });
+          return opts;
+        },
+        get paginatedGroups() {
+          const vis = this.visibleFiltered();
+          if (!vis.length) return [];
+          const groups = [];
+          let current = null;
+          for (const item of vis) {
+            if (!current || current.title !== item.groupTitle) {
+              current = { title: item.groupTitle, items: [] };
+              groups.push(current);
+            }
+            current.items.push(item);
+          }
+          return groups;
+        },
 
-    // ---- Storage dashboard ----
-    async function loadStorage(render=true){if(!render)return;try{const s=await(await fetch('/api/status')).json();const stats=s.library_stats||[];const max=Math.max(...stats.map(x=>x.total_size),1);$('storage_list').innerHTML=stats.map(x=>{const pct=(x.total_size/max*100).toFixed(1);return `<div class="stat" style="flex-direction:column;align-items:stretch"><div style="display:flex;justify-content:space-between"><span><strong>${esc(x.library_name||x.library_id)}</strong></span><strong>${bytes(x.total_size)}</strong></div><small class="muted">${x.item_count} 条 · 无封面 ${x.no_poster||0} · 无时长 ${x.no_duration||0}</small><div class="lib-bar"><div class="lib-bar-fill" style="width:${pct}%"></div></div></div>`}).join('')||'<span class="muted">暂无数据，请先同步</span>'}catch{$('storage_list').innerHTML='加载失败'}}
+        // ── Init ──
+        init() {
+          this.loadConfig().then(() => this.loadLibraries());
+          this.pollStatus();
+          setInterval(() => this.pollStatus(), 3000);
+          this.connectWebSocket();
+        },
 
-    // ---- Ignore ----
-    async function loadIgnored(){const rows=await(await fetch('/api/ignore')).json();$('ignored').innerHTML=rows.map(r=>`<div class="stat"><span>${esc(r.mode)} · ${esc(r.name||r.group_key||r.emby_id)}</span><button class="ghost" onclick="fetch('/api/ignore/${r.id}',{method:'DELETE'}).then(loadIgnored)">恢复</button></div>`).join('')||'无黑名单'}
+        // ── Toast ──
+        toast(message, type = 'info') {
+          const id = ++this.toastCounter;
+          this.toasts.push({ id, message, type, showing: true });
+          setTimeout(() => this.removeToast(this.toasts.findIndex(t => t.id === id)), 3500);
+        },
+        removeToast(idx) {
+          if (idx < 0 || idx >= this.toasts.length) return;
+          this.toasts[idx].showing = false;
+          setTimeout(() => { this.toasts.splice(idx, 1); }, 250);
+        },
+        toastClasses(type) {
+          switch (type) {
+            case 'success': return 'bg-[var(--success)]/10 border-[var(--success)]/30';
+            case 'error': return 'bg-[var(--danger)]/10 border-[var(--danger)]/30';
+            case 'warning': return 'bg-[var(--warn)]/10 border-[var(--warn)]/30';
+            default: return 'bg-[var(--glass-bg)] border-[var(--glass-border)]';
+          }
+        },
 
-    // ---- Logs ----
-    async function loadLogs(scroll=true){const box=$('logs');box.textContent=(await(await fetch('/api/logs')).json()).join('\n');if(scroll)box.scrollTop=0}async function clearLogs(){await fetch('/api/logs/clear',{method:'POST'});loadLogs()}
+        // ── Utilities ──
+        bytes(n) {
+          n = Number(n || 0);
+          const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+          let i = 0;
+          while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+          return `${n.toFixed(i ? 1 : 0)} ${u[i]}`;
+        },
+        formatDuration(s) {
+          if (!s && s !== 0) return '-';
+          s = Math.round(s);
+          if (s < 60) return s + 's';
+          const m = Math.floor(s / 60);
+          const sec = s % 60;
+          if (m < 60) return m + ':' + String(sec).padStart(2, '0');
+          const h = Math.floor(m / 60);
+          return h + ':' + String(m % 60).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+        },
+        formatTime(ts) {
+          if (!ts) return '';
+          return new Date(ts * 1000).toLocaleTimeString();
+        },
+        channels(ch) {
+          const map = { 2: '2.0', 6: '5.1', 8: '7.1' };
+          return map[ch] || `${ch}ch`;
+        },
+        tagText(item) {
+          const tags = [];
+          if (item.tag_leak) tags.push('流出');
+          if (item.tag_crack) tags.push('破解');
+          if (item.tag_c) tags.push('C');
+          if (item.tag_uc) tags.push('UC');
+          if (item.tag_u) tags.push('U');
+          return tags.join(' · ') || '无标签';
+        },
+        openEmby(id) {
+          const host = this.form.host || this.status.server_name || '';
+          if (host) window.open(`${host}/web/index.html#!/item?id=${encodeURIComponent(id)}`, '_blank');
+        },
+        storageBarPct(size) {
+          const max = Math.max(...this.storageStats.map(x => x.total_size), 1);
+          return (size / max * 100).toFixed(1);
+        },
 
-    // ---- Init ----
-    async function init(){renderModes();renderModeActions();await loadConfig();await loadLibraries();await poll()}setInterval(poll,3000);init();
+        // ── Navigation ──
+        navigate(page) {
+          this.activePage = page;
+          this.sidebarOpen = false;
+          if (page === 'settings') { this.loadConfig(); this.loadIgnored(); this.loadDeleteQueue(); }
+          if (page === 'logs') this.loadLogs();
+          if (page === 'storage') this.loadStorage();
+          if (page === 'tasks') this.loadTasks();
+        },
+
+        // ── Status Polling ──
+        async pollStatus() {
+          try {
+            const r = await fetch('/api/status');
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            this.status = await r.json();
+          } catch (e) {
+            // silently fail
+          }
+        },
+
+        // ── WebSocket ──
+        connectWebSocket() {
+          const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${protocol}//${location.host}/ws`;
+          let ws;
+          try { ws = new WebSocket(wsUrl); } catch (e) { return; }
+          ws.onopen = () => {
+            this.wsConnected = true;
+          };
+          ws.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.type === 'log' && data.message) {
+                this.logLines.push(data.message);
+                // Keep last 2000 lines
+                if (this.logLines.length > 2000) this.logLines.splice(0, this.logLines.length - 2000);
+                this.$nextTick(() => { this.$refs.logViewer?.scrollTo(0, this.$refs.logViewer.scrollHeight); });
+              }
+              if (data.type === 'status') {
+                Object.assign(this.status, data.data || {});
+              }
+              if (data.type === 'toast') {
+                this.toast(data.message, data.level || 'info');
+              }
+            } catch (e) { /* non-JSON message, ignore */ }
+          };
+          ws.onclose = () => {
+            this.wsConnected = false;
+            clearTimeout(this.wsReconnectTimer);
+            this.wsReconnectTimer = setTimeout(() => this.connectWebSocket(), 3000);
+          };
+          ws.onerror = () => { ws.close(); };
+        },
+
+        // ── Config ──
+        async loadConfig() {
+          try {
+            const c = await (await fetch('/api/config')).json();
+            this.form.host = c.host || '';
+            this.form.user = c.user || '';
+            this.form.webhook = c.webhook || '';
+            this.form.cron_sync = c.cron_sync || '';
+            const p = c.prefs || {};
+            this.prefs.av_keep_priority = p.av_keep_priority || 'rank';
+            this.prefs.size_keep = p.size_keep || 'path_long';
+            this.prefs.duration_keep = p.duration_keep || 'min';
+            this.prefs.smart_keep = p.smart_keep || 'reso_max';
+            this.prefs.delete_retry_max = p.delete_retry_max ?? 3;
+            this.prefs.auto_refresh_library = p.auto_refresh_library !== false;
+            if (p.duration_scope) this.scanParams.duration_scope = p.duration_scope;
+            if (p.duration_precision) this.scanParams.duration_precision = p.duration_precision;
+          } catch (e) { /* ignore */ }
+        },
+        async saveConfig() {
+          this.loading.saveConfig = true;
+          try {
+            const payload = {
+              host: this.form.host, user: this.form.user, pwd: this.form.pwd,
+              webhook: this.form.webhook, cron_sync: this.form.cron_sync,
+              prefs: {
+                av_keep_priority: this.prefs.av_keep_priority,
+                size_keep: this.prefs.size_keep,
+                duration_keep: this.prefs.duration_keep,
+                smart_keep: this.prefs.smart_keep,
+                duration_scope: this.scanParams.duration_scope,
+                duration_precision: this.scanParams.duration_precision,
+                confirm_batch: 'true',
+                auto_refresh_library: this.prefs.auto_refresh_library,
+                delete_retry_max: Number(this.prefs.delete_retry_max || 3)
+              }
+            };
+            const r = await fetch('/api/config', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (!r.ok) { this.toast(await r.text(), 'error'); return; }
+            this.form.pwd = '';
+            this.toast('配置已保存', 'success');
+            this.pollStatus();
+          } catch (e) { this.toast('保存失败: ' + e.message, 'error'); }
+          finally { this.loading.saveConfig = false; }
+        },
+        async testWebhook() {
+          try {
+            const r = await fetch('/api/test_webhook', { method: 'POST' });
+            const d = await r.json();
+            this.toast(d.message || '已发送', 'success');
+          } catch (e) { this.toast('测试失败', 'error'); }
+        },
+        async refreshLibrary() {
+          await fetch('/api/refresh-library', { method: 'POST' });
+          this.toast('Emby 全库刷新已触发', 'success');
+        },
+        async exportConfig() {
+          try {
+            const r = await fetch('/api/config/export');
+            const d = await r.json();
+            const blob = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `emby-clean-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            this.toast('配置已导出', 'success');
+          } catch (e) { this.toast('导出失败', 'error'); }
+        },
+        async importConfig(e) {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          try {
+            const text = await file.text();
+            const payload = JSON.parse(text);
+            const r = await fetch('/api/config/import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (d.status === 'ok') {
+              this.toast('配置导入成功！正在刷新...', 'success');
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              this.toast(d.detail || '导入失败', 'error');
+            }
+          } catch (e) {
+            this.toast('文件格式错误：' + e.message, 'error');
+          }
+          e.target.value = '';
+        },
+
+        // ── Libraries ──
+        async loadLibraries() {
+          this.loading.libraries = true;
+          try {
+            this.libraries = await (await fetch('/api/libraries')).json();
+          } catch (e) { this.libraries = []; }
+          finally { this.loading.libraries = false; }
+        },
+        toggleLib(id) {
+          if (this.selectedLibs.has(id)) this.selectedLibs.delete(id);
+          else this.selectedLibs.add(id);
+          this.resetResults();
+        },
+        toggleAllLibs() {
+          const all = this.libraries.map(x => x.Id);
+          const on = this.selectedLibs.size !== all.length;
+          this.selectedLibs = new Set(on ? all : []);
+          this.resetResults();
+          this.loadLibraries();
+        },
+
+        // ── Scan Mode ──
+        setMode(id) {
+          this.scanMode = id;
+          this.resetResults();
+        },
+
+        // ── Scan ──
+        resetResults() {
+          this.selectedIds = new Set();
+          this.reviewedIds = new Set();
+          this.flatItems = [];
+          this.scanData = [];
+          this.resultPage = 1;
+          this.currentFilter = 'all';
+        },
+        async startScan() {
+          this.loading.scan = true;
+          this.scanParams.page_size = Number(this.scanParams.page_size) || 100;
+          this.navigate('results');
+          try {
+            const libs = [...this.selectedLibs].join(',');
+            const url = `/api/scan?mode=${this.scanMode}&lib=${libs}&param_s=${this.scanParams.param_s}&duration_scope=${this.scanParams.duration_scope}&duration_precision=${this.scanParams.duration_precision}`;
+            const r = await fetch(url);
+            if (!r.ok) { this.toast('扫描失败: HTTP ' + r.status, 'error'); return; }
+            this.scanData = await r.json();
+            this.flatItems = this.scanData.flatMap(g =>
+              g.items.map(i => ({ ...i, groupTitle: g.title, groupItems: g.items.map(x => x.emby_id) }))
+            );
+            this.resultPage = 1;
+            this.reviewedIds = new Set();
+            this.selectedIds = new Set();
+            // Select recommended deletes
+            this.flatItems.forEach(i => {
+              if (i.recommend_action === 'delete') this.selectedIds.add(i.emby_id);
+            });
+            // Auto mark review items
+            this.flatItems.forEach(i => {
+              if (i.recommend_action === 'review') this.reviewedIds.add(i.emby_id);
+            });
+            this.toast(`扫描完成: ${this.scanData.length} 组 / ${this.flatItems.length} 条`, 'success');
+          } catch (e) {
+            this.toast('扫描出错: ' + e.message, 'error');
+          }
+          finally { this.loading.scan = false; }
+        },
+
+        // ── Results ──
+        visible() {
+          if (!this.flatItems.length) return [];
+          const start = (this.resultPage - 1) * this.scanParams.page_size;
+          let end = start + this.scanParams.page_size;
+          // Keep groups together
+          if (this.flatItems[end] && this.flatItems[end].groupTitle === this.flatItems[end - 1].groupTitle) {
+            while (end < this.flatItems.length && this.flatItems[end].groupTitle === this.flatItems[end - 1].groupTitle) end++;
+          }
+          return this.flatItems.slice(start, end);
+        },
+        visibleFiltered() {
+          const vis = this.visible();
+          if (this.currentFilter === 'all') return vis;
+          return vis.filter(i => i.recommend_action === this.currentFilter);
+        },
+        pageCount() {
+          return Math.max(1, Math.ceil(this.flatItems.length / (this.scanParams.page_size || 100)));
+        },
+        prevPage() {
+          if (this.resultPage > 1) { this.resultPage--; }
+        },
+        nextPage() {
+          if (this.resultPage < this.pageCount()) { this.resultPage++; }
+        },
+        toggleItem(id, on) {
+          if (on) this.selectedIds.add(id);
+          else this.selectedIds.delete(id);
+        },
+        toggleGroupItems(ids) {
+          const allSelected = ids.every(id => this.selectedIds.has(id));
+          ids.forEach(id => allSelected ? this.selectedIds.delete(id) : this.selectedIds.add(id));
+        },
+        toggleVisiblePage(on) {
+          this.visible().forEach(i => on ? this.selectedIds.add(i.emby_id) : this.selectedIds.delete(i.emby_id));
+        },
+        selectedVisibleIds() {
+          const visibleSet = new Set(this.visible().map(i => i.emby_id));
+          return [...this.selectedIds].filter(id => visibleSet.has(id));
+        },
+        selectRecommendedPage() {
+          this.visible().forEach(i => {
+            if (i.recommend_action === 'delete') this.selectedIds.add(i.emby_id);
+            else this.selectedIds.delete(i.emby_id);
+          });
+        },
+        selectByTag(tag) {
+          this.visible().forEach(i => {
+            let match = false;
+            if (tag === 'tag_raw') match = !i.tag_c && !i.tag_uc && !i.tag_u && !i.tag_crack && !i.tag_leak;
+            else match = i[tag];
+            if (match) this.selectedIds.add(i.emby_id);
+            else this.selectedIds.delete(i.emby_id);
+          });
+        },
+        selectResolution(highest) {
+          this.selectKeepPerGroup(items => items.reduce((best, i) =>
+            !best || (highest ? (i.resolution || 0) > (best.resolution || 0) : (i.resolution || 0) < (best.resolution || 0)) ? i : best, null));
+        },
+        selectBySize(largest) {
+          this.selectKeepPerGroup(items => items.reduce((best, i) =>
+            !best || (largest ? i.size > best.size : i.size < best.size) ? i : best, null));
+        },
+        selectKeepPerGroup(picker) {
+          const groups = {};
+          this.visible().forEach(i => { (groups[i.groupTitle] ??= []).push(i); });
+          Object.values(groups).forEach(items => {
+            const keep = picker(items);
+            items.forEach(i => {
+              if (!keep || i.emby_id !== keep.emby_id) this.selectedIds.add(i.emby_id);
+              else this.selectedIds.delete(i.emby_id);
+            });
+          });
+        },
+
+        // ── Actions ──
+        async ignoreOne(id) { await this.postIds('/api/ignore', { ids: [id], mode: this.scanMode }); },
+        async deleteOne(id) {
+          if (!confirm(`确认删除 ${id}？`)) return;
+          await this.postIds('/api/delete', { ids: [id] });
+        },
+        async ignoreSelected() {
+          const ids = this.selectedVisibleIds();
+          if (!ids.length) { this.toast('当前页未选择条目', 'warning'); return; }
+          await this.postIds('/api/ignore', { ids, mode: this.scanMode });
+        },
+        async deleteSelected() {
+          const ids = this.selectedVisibleIds();
+          if (!ids.length) { this.toast('当前页未选择条目', 'warning'); return; }
+          if (!confirm(`确认将当前页选中的 ${ids.length} 条加入删除队列？`)) return;
+          await this.postIds('/api/delete', { ids });
+        },
+        async postIds(url, payload) {
+          const ids = new Set(payload.ids || []);
+          if (!ids.size) { this.toast('未选择条目', 'warning'); return; }
+          try {
+            const r = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) { this.toast(d.detail || d.message || '操作失败', 'error'); return; }
+            this.toast(d.message || '操作已提交', 'success');
+            // Remove deleted items
+            this.flatItems = this.flatItems.filter(i => !ids.has(i.emby_id));
+            this.scanData = this.scanData.map(g => ({ ...g, items: g.items.filter(i => !ids.has(i.emby_id)) })).filter(g => g.items.length);
+            ids.forEach(id => this.selectedIds.delete(id));
+            this.resultPage = Math.min(this.resultPage, this.pageCount());
+            this.loadLogs();
+          } catch (e) { this.toast('操作失败: ' + e.message, 'error'); }
+        },
+
+        // ── Sync ──
+        async syncNow() {
+          await fetch('/api/sync', { method: 'POST' });
+          this.toast('同步已开始，日志会自动更新', 'success');
+          this.navigate('logs');
+        },
+
+        // ── Tasks ──
+        async loadTasks() {
+          this.loading.tasks = true;
+          try {
+            this.tasks = await (await fetch('/api/tasks')).json();
+          } catch (e) { this.tasks = []; }
+          finally { this.loading.tasks = false; }
+        },
+        showTaskForm(data) {
+          this.taskFormOpen = true;
+          this.taskEditId = null;
+          this.taskForm = { name: '', mode: 'av', cron: '0 4 * * *', libraries: '', auto_delete: false, enabled: true };
+        },
+        async editTask(id) {
+          try {
+            const tasks = await (await fetch('/api/tasks')).json();
+            const t = tasks.find(x => x.id === id);
+            if (!t) return;
+            this.taskFormOpen = true;
+            this.taskEditId = id;
+            this.taskForm = {
+              name: t.name || '',
+              mode: t.mode || 'av',
+              cron: t.cron || '0 4 * * *',
+              libraries: t.libraries || '',
+              auto_delete: !!t.auto_delete,
+              enabled: t.enabled !== false
+            };
+          } catch (e) { this.toast('加载任务失败', 'error'); }
+        },
+        async saveTask() {
+          this.loading.saveTask = true;
+          try {
+            const payload = {
+              name: this.taskForm.name,
+              mode: this.taskForm.mode,
+              cron: this.taskForm.cron,
+              libraries: this.taskForm.libraries,
+              auto_delete: this.taskForm.auto_delete,
+              enabled: this.taskForm.enabled
+            };
+            const url = this.taskEditId ? `/api/tasks/${this.taskEditId}` : '/api/tasks';
+            const method = this.taskEditId ? 'PUT' : 'POST';
+            const r = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (r.ok) {
+              this.taskFormOpen = false;
+              this.loadTasks();
+              this.toast('任务已保存', 'success');
+            } else {
+              this.toast('保存失败', 'error');
+            }
+          } catch (e) { this.toast('保存失败: ' + e.message, 'error'); }
+          finally { this.loading.saveTask = false; }
+        },
+        async runTask(id) {
+          await fetch(`/api/tasks/${id}/run`, { method: 'POST' });
+          this.toast('任务已触发执行', 'success');
+        },
+        async delTask(id) {
+          if (!confirm('确认删除此任务？')) return;
+          await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+          this.loadTasks();
+          this.toast('任务已删除', 'success');
+        },
+
+        // ── Delete Queue ──
+        async loadDeleteQueue() {
+          this.loading.deleteQueue = true;
+          try {
+            const d = await (await fetch('/api/delete-queue')).json();
+            this.deleteQueue = { counts: d.counts || {}, items: d.items || [] };
+          } catch (e) { this.deleteQueue = { counts: {}, items: [] }; }
+          finally { this.loading.deleteQueue = false; }
+        },
+        async retryFailed() {
+          try {
+            const r = await fetch('/api/delete-queue/retry', { method: 'POST' });
+            const d = await r.json();
+            this.toast(`已重试 ${d.retried || 0} 条`, 'success');
+            this.loadDeleteQueue();
+          } catch (e) { this.toast('重试失败', 'error'); }
+        },
+        async clearDone() {
+          try {
+            const r = await fetch('/api/delete-queue/clear', { method: 'POST' });
+            const d = await r.json();
+            this.toast(`已清理 ${d.cleared || 0} 条`, 'success');
+            this.loadDeleteQueue();
+          } catch (e) { this.toast('清理失败', 'error'); }
+        },
+
+        // ── Ignore ──
+        async loadIgnored() {
+          this.loading.ignored = true;
+          try {
+            this.ignoredItems = await (await fetch('/api/ignore')).json();
+          } catch (e) { this.ignoredItems = []; }
+          finally { this.loading.ignored = false; }
+        },
+        async removeIgnored(id) {
+          await fetch(`/api/ignore/${id}`, { method: 'DELETE' });
+          this.loadIgnored();
+          this.toast('已从黑名单恢复', 'success');
+        },
+
+        // ── Storage ──
+        async loadStorage() {
+          this.loading.storage = true;
+          try {
+            const s = await (await fetch('/api/status')).json();
+            this.storageStats = s.library_stats || [];
+          } catch (e) { this.storageStats = []; }
+          finally { this.loading.storage = false; }
+        },
+
+        // ── Logs ──
+        async loadLogs() {
+          try {
+            const lines = await (await fetch('/api/logs')).json();
+            if (Array.isArray(lines)) {
+              this.logLines = lines;
+              this.$nextTick(() => {
+                const viewer = this.$refs.logViewer;
+                if (viewer) viewer.scrollTop = 0;
+              });
+            }
+          } catch (e) { /* ignore */ }
+        },
+        async clearLogs() {
+          await fetch('/api/logs/clear', { method: 'POST' });
+          this.logLines = [];
+          this.toast('日志已清空', 'success');
+        }
+      }));
+    });
   </script>
 </body>
 </html>

@@ -25,6 +25,7 @@ from .routes import (
     refresh,
     scan,
     tasks,
+    ws,
 )
 from .services.delete_service import is_delete_worker_running
 from .services.emby_service import startup_reauth
@@ -56,6 +57,9 @@ for _router in (
     logs.router,
 ):
     app.include_router(_router)
+
+# WebSocket route (registered separately since it's not a regular HTTP router)
+app.include_router(ws.router)
 
 
 # -- Lifecycle ---------------------------------------------------------------

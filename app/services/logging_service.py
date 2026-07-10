@@ -24,6 +24,23 @@ def log(kind: str, msg: str) -> None:
                 )
     except Exception:
         pass
+    # Broadcast to WebSocket clients (fire-and-forget)
+    _ws_broadcast_log(line)
+
+
+def _ws_broadcast_log(line: str) -> None:
+    """Try to push log line to WebSocket clients. Non-blocking, best-effort."""
+    try:
+        from ..routes.ws import broadcast_log
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(broadcast_log(line))
+    except Exception:
+        pass
+
+
+# Late import to avoid circular deps
+import asyncio  # noqa: E402
 
 
 async def notify(title: str, text: str) -> None:
