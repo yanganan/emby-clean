@@ -117,6 +117,22 @@ async def startup() -> None:
     asyncio.create_task(startup_reauth())
 
 
+@app.on_event("shutdown")
+async def shutdown() -> None:
+    """Graceful shutdown: stop scheduler and wait for delete worker."""
+    log("SYSTEM", "正在关闭服务...")
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+    # Wait briefly for delete worker to finish current item
+    if is_delete_worker_running():
+        log("SYSTEM", "等待删除队列完成当前操作...")
+        try:
+            await asyncio.wait_for(DELETE_TASK, timeout=30)  # type: ignore[arg-type]
+        except (asyncio.TimeoutError, asyncio.CancelledError):
+            log("SYSTEM", "删除队列超时，强制关闭")
+    log("SYSTEM", "服务已关闭")
+
+
 async def startup_reauth() -> None:
     """On startup, verify token validity and re-authenticate if expired."""
     await asyncio.sleep(2)
@@ -165,9 +181,12 @@ def log(kind: str, msg: str) -> None:
     try:
         with connect() as db:
             db.execute("insert into logs(line,created_at) values(?,?)", (line, now_ts()))
-            db.execute(
-                "delete from logs where id not in (select id from logs order by id desc limit 1000)"
-            )
+            # Only trim when logs table exceeds 1500 rows (amortized, not every call)
+            count = db.execute("select count(*) c from logs").fetchone()["c"]
+            if count > 1500:
+                db.execute(
+                    "delete from logs where id not in (select id from logs order by id desc limit 1000)"
+                )
     except Exception:
         pass
 

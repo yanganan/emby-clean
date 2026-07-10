@@ -177,6 +177,16 @@ def init_db() -> None:
               and coalesce(has_poster,0) = 1
             """
         )
+        # --- Indexes for performance (idempotent) ---
+        db.execute("create index if not exists idx_media_library on media_items(library_id)")
+        db.execute("create index if not exists idx_media_is_media on media_items(is_media)")
+        db.execute("create index if not exists idx_media_parent on media_items(parent_id)")
+        db.execute("create index if not exists idx_media_provider on media_items(provider_key)")
+        db.execute("create index if not exists idx_delq_status on delete_queue(status)")
+        db.execute("create index if not exists idx_delq_emby_id on delete_queue(emby_id)")
+        db.execute("create index if not exists idx_ignore_mode on ignore_items(mode)")
+        db.execute("create index if not exists idx_logs_created on logs(created_at)")
+
         if get_config_value(db, "prefs") is None:
             set_config_value(db, "prefs", DEFAULT_PREFS)
 
@@ -425,4 +435,6 @@ def is_data_volume_mounted() -> bool:
         # but a parent directory is
         return False
     except Exception:
-        return True  # Can't determine, assume mounted (non-Linux or no /proc)
+        # Can't determine (non-Linux or no /proc) — be safe, assume NOT mounted
+        # so the user gets a warning rather than a false sense of security.
+        return False
