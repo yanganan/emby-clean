@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b1020'/%3E%3Ctext x='50' y='72' font-size='52' text-anchor='middle' fill='%234db5ff'%3E🧹%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpine@3.x.x/dist/cdn.min.js"></script>
   <style>
@@ -150,9 +150,10 @@
     .main-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
     .main-scroll::-webkit-scrollbar-track { background: transparent; }
   </style>
+  <link href="/static/styles.css" rel="stylesheet">
 </head>
 <body>
-  <div x-data="app()" x-init="init()" class="flex min-h-screen" :class="{ 'overflow-hidden': sidebarOpen }">
+  <div x-data="app()" x-init="init()" data-ui="workspace-shell" class="workspace-shell flex min-h-screen" :class="{ 'overflow-hidden': sidebarOpen }">
     <!-- TOAST -->
     <div class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none" style="min-width:280px;max-width:380px">
       <template x-for="toast in toasts" :key="toast.id">
@@ -174,9 +175,9 @@
     </div>
 
     <!-- MOBILE HEADER -->
-    <div class="fixed top-0 left-0 right-0 z-30 glass-strong px-4 py-3 flex items-center justify-between md:hidden">
-      <div class="text-lg font-black tracking-tight">Emby<span class="text-[var(--primary)]">Clean</span></div>
-      <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg hover:bg-[var(--line)] transition-colors">
+    <div class="mobile-header fixed top-0 left-0 right-0 z-30 px-4 py-3 flex items-center justify-between md:hidden">
+      <div class="brand"><span class="brand-mark">EC</span><span>Emby Clean</span></div>
+      <button @click="sidebarOpen = !sidebarOpen" aria-label="打开导航" class="icon-button p-2 rounded-lg transition-colors">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
@@ -187,53 +188,65 @@
     <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-20 bg-black/40 backdrop-blur-sm md:hidden" x-transition.opacity></div>
 
     <!-- SIDEBAR -->
-    <aside class="glass-strong sidebar-scroll fixed md:sticky top-0 left-0 z-20 h-full w-72 shrink-0 flex flex-col pt-16 md:pt-0 transition-transform duration-300 md:translate-x-0"
+    <aside class="sidebar-shell sidebar-scroll fixed md:sticky top-0 left-0 z-20 h-full w-72 shrink-0 flex flex-col pt-16 md:pt-0 transition-transform duration-300 md:translate-x-0"
            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'">
-      <div class="px-6 pt-6 pb-2 hidden md:block">
-        <div class="text-2xl font-black tracking-tight">Emby<span class="text-[var(--primary)]">Clean</span></div>
+      <div class="sidebar-brand px-5 pt-6 pb-2 hidden md:block">
+        <div class="brand"><span class="brand-mark">EC</span><span>Emby Clean</span></div>
+        <p>MEDIA HYGIENE CONSOLE</p>
       </div>
-      <div class="glass mx-4 mt-4 rounded-xl p-4 space-y-2 text-sm">
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">服务器</span><strong x-text="status.server_name || '-'" class="font-semibold"></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">版本</span><strong x-text="status.server_ver || '-'" class="font-semibold"></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">用户</span><strong x-text="status.user_name || '-'" class="font-semibold"></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">缓存媒体</span><strong x-text="status.media_cache ?? status.local_cache ?? 0" class="font-semibold"></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">媒体对账</span><strong class="font-semibold"><span x-text="status.media_cache ?? 0"></span> / <span x-text="status.library_expected || 0"></span></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">总占用</span><strong x-text="bytes(status.total_storage)" class="font-semibold"></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">已清理</span><strong x-text="status.cleaned_count || 0" class="font-semibold"></strong></div>
-        <div class="flex justify-between"><span class="text-[var(--text-muted)]">释放</span><strong x-text="bytes(status.saved_space)" class="font-semibold"></strong></div>
-        <div class="pt-1 border-t border-[var(--line)]">
-          <span x-show="status.connected" class="text-[var(--success)] font-semibold text-xs">● 已连接</span>
-          <span x-show="!status.connected" class="text-[var(--text-muted)] font-semibold text-xs">连接状态检测中</span>
+      <div data-ui="server-status" class="status-console mx-4 mt-4 rounded-xl p-4 text-sm">
+        <div class="status-console__header">
+          <span>服务器状态</span>
+          <span x-show="status.connected" class="connection-badge is-online">在线</span>
+          <span x-show="!status.connected" class="connection-badge">检测中</span>
         </div>
-        <div x-text="syncDetailText" class="text-xs text-[var(--text-muted)] leading-tight"></div>
-        <button @click="syncNow" :disabled="status.is_syncing" class="w-full rounded-lg py-2 px-3 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 mt-1">
+        <div class="server-identity">
+          <strong x-text="status.server_name || '尚未连接'"></strong>
+          <span><span x-text="status.user_name || '-'" class="font-semibold"></span> · v<span x-text="status.server_ver || '-'"></span></span>
+        </div>
+        <div class="status-metrics">
+          <div><span>缓存</span><strong x-text="status.media_cache ?? status.local_cache ?? 0"></strong></div>
+          <div><span>总占用</span><strong x-text="bytes(status.total_storage)"></strong></div>
+          <div><span>已清理</span><strong x-text="status.cleaned_count || 0"></strong></div>
+          <div><span>已释放</span><strong x-text="bytes(status.saved_space)"></strong></div>
+        </div>
+        <div class="reconcile-line"><span>媒体对账</span><strong><span x-text="status.media_cache ?? 0"></span> / <span x-text="status.library_expected || 0"></span></strong></div>
+        <div x-text="syncDetailText || '等待下一次同步'" class="sync-detail text-xs leading-tight"></div>
+        <button @click="syncNow" :disabled="status.is_syncing" class="button button-primary w-full mt-2">
           <span x-show="status.is_syncing">同步中...</span>
-          <span x-show="!status.is_syncing">立即同步元数据</span>
+          <span x-show="!status.is_syncing">↻ 同步元数据</span>
         </button>
       </div>
-      <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto sidebar-scroll">
+      <nav data-ui="primary-navigation" aria-label="主导航" class="primary-navigation flex-1 px-4 py-4 space-y-1 overflow-y-auto sidebar-scroll">
+        <p class="nav-kicker">工作区</p>
         <template x-for="item in navItems" :key="item.id">
           <button @click="navigate(item.id)"
-                  class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
-                  :class="activePage === item.id ? 'bg-[var(--primary)] text-[#06111e] shadow-lg' : 'text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--line)]'">
-            <span x-text="item.icon" class="text-lg"></span>
+                  class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
+                  :class="{ active: activePage === item.id }">
+            <span x-text="item.icon" class="nav-icon text-lg"></span>
             <span x-text="item.label"></span>
+            <span class="nav-arrow">›</span>
           </button>
         </template>
       </nav>
-      <div class="px-4 pb-4 text-xs text-[var(--text-muted)]">v2.0 · 不建议映射公网</div>
+      <div class="security-note mx-4 mb-4"><span>◈</span><div><strong>仅限内网使用</strong><small>请勿直接映射至公网</small></div></div>
     </aside>
 
     <!-- MAIN -->
     <main class="flex-1 main-scroll pt-16 md:pt-0 overflow-y-auto min-h-screen" style="height:100vh">
-      <div class="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6 pb-28 md:pb-6 space-y-5" x-ref="mainContent">
+      <div class="workspace-content max-w-7xl mx-auto px-4 md:px-8 py-5 md:py-8 pb-28 md:pb-8 space-y-5" x-ref="mainContent">
 
         <!-- ═══ SCAN PAGE ═══ -->
-        <div x-show="activePage === 'scan'" class="page-enter space-y-5">
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
+        <div x-show="activePage === 'scan'" data-ui="scan-workflow" class="page-enter space-y-5">
+          <header data-page-heading="scan" class="page-heading">
+            <div><p class="eyebrow">SCAN WORKSPACE</p><h1>开始一次安全扫描</h1><p>先确定范围，再选择规则。扫描只生成候选结果，不会直接删除媒体。</p></div>
+            <div class="page-heading__meta"><span class="live-dot"></span><span x-text="status.connected ? 'Emby 已连接' : '等待连接'"></span></div>
+          </header>
+          <div class="scan-layout">
+          <section class="surface scan-library-panel rounded-2xl p-5 md:p-6 space-y-4">
             <div class="flex items-center justify-between">
-              <h2 class="text-lg font-bold">1. 选择媒体库</h2>
-              <button @click="toggleAllLibs" class="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors px-3 py-1.5 rounded-lg border border-[var(--line)] hover:border-[var(--primary)]">全选/反选</button>
+              <div class="section-title"><span>01</span><div><h2>选择媒体库</h2><p>已选择 <strong x-text="selectedLibs.length"></strong> 个媒体库</p></div></div>
+              <button @click="toggleAllLibs" class="button button-quiet">全选 / 清空</button>
             </div>
             <div x-show="loading.libraries" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               <template x-for="i in 6" :key="i">
@@ -252,15 +265,15 @@
               </template>
               <div x-show="!libraries.length && !loading.libraries" class="col-span-full text-sm text-[var(--text-muted)] py-4 text-center">无媒体库 — 请先在「配置」页保存 Emby 信息</div>
             </div>
-          </div>
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
-            <h2 class="text-lg font-bold">2. 扫描模式</h2>
+          </section>
+          <section class="surface scan-mode-panel rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="section-title"><span>02</span><div><h2>选择扫描规则</h2><p>只应用一个规则，便于审阅结果</p></div></div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <template x-for="[id, label] in modes" :key="id">
-                <div @click="setMode(id)" class="rounded-xl p-4 text-center cursor-pointer transition-all duration-150 border min-h-[4rem] flex items-center justify-center text-sm font-semibold"
-                     :class="scanMode === id ? 'chip-on bg-[var(--primary-glow)] text-[var(--primary)]' : 'chip-off bg-white/[0.02] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)]'">
+                <button @click="setMode(id)" type="button" class="mode-card rounded-xl p-4 text-left cursor-pointer transition-all duration-150 border min-h-[4rem] flex items-center text-sm font-semibold"
+                     :class="{ active: scanMode === id }">
                   <span x-text="label"></span>
-                </div>
+                </button>
               </template>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -269,19 +282,23 @@
               <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长精度</label><select x-model="scanParams.duration_precision" class="text-sm"><option value="second">整秒</option><option value="centisecond">百分秒</option></select></div>
               <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">每页处理</label><select x-model.number="scanParams.page_size" class="text-sm"><option :value="50">50</option><option :value="100">100</option><option :value="200">200</option></select></div>
             </div>
-            <div class="flex items-center gap-4 pt-1">
-              <button @click="startScan" :disabled="loading.scan" class="rounded-xl py-2.5 px-6 text-sm font-bold bg-[var(--primary)] text-[#06111e] hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <div class="scan-action pt-1">
+              <div><strong>准备就绪</strong><span>扫描结果将进入审阅工作台</span></div>
+              <button @click="startScan" :disabled="loading.scan" class="button button-primary button-large flex items-center gap-2">
                 <span x-show="loading.scan" class="spinner"></span>
                 <span x-text="loading.scan ? '扫描中...' : '开始扫描'"></span>
               </button>
-              <span class="text-xs text-[var(--text-muted)]">结果会进入独立页面；每页默认勾选建议删除项，处理完再翻下一页。</span>
             </div>
+          </section>
           </div>
         </div>
 
         <!-- ═══ RESULTS PAGE ═══ -->
-        <div x-show="activePage === 'results'" class="page-enter space-y-4">
-          <div class="glass rounded-xl p-4 sticky top-0 z-10">
+        <div x-show="activePage === 'results'" data-ui="results-workbench" class="page-enter space-y-4">
+          <header data-page-heading="results" class="page-heading">
+            <div><p class="eyebrow">REVIEW QUEUE</p><h1>扫描结果审阅</h1><p>逐组确认保留与删除项，危险操作只作用于当前页的勾选内容。</p></div>
+          </header>
+          <div class="surface results-toolbar rounded-xl p-4 sticky top-0 z-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <strong class="text-sm md:text-base" x-text="resultTitle"></strong>
@@ -332,7 +349,7 @@
           </div>
 
           <!-- No results -->
-          <div x-show="!flatItems.length && !loading.scan" class="glass rounded-2xl p-8 text-center text-sm text-[var(--text-muted)]">暂无扫描结果 — 请先在「扫描」页面选择媒体库和模式开始扫描</div>
+          <div x-show="!flatItems.length && !loading.scan" class="surface empty-state rounded-2xl p-8 text-center text-sm"><span>◎</span><strong>还没有扫描结果</strong><p>返回扫描页，选择媒体库和规则后开始扫描。</p><button @click="navigate('scan')" class="button button-primary">前往扫描</button></div>
 
           <!-- Filter bar -->
           <div x-show="flatItems.length" class="flex flex-wrap gap-2">
@@ -390,9 +407,12 @@
 
         <!-- ═══ TASKS PAGE ═══ -->
         <div x-show="activePage === 'tasks'" class="page-enter space-y-5">
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
-            <h2 class="text-lg font-bold">定时任务</h2>
-            <p class="text-xs text-[var(--text-muted)]">定时执行同步 + 扫描。开启「自动删除」后，扫描命中的推荐删除项会自动入队。</p>
+          <header data-page-heading="tasks" class="page-heading">
+            <div><p class="eyebrow">AUTOMATION</p><h1>定时任务</h1><p>将同步、扫描和可选的自动清理编排为周期任务。</p></div>
+            <button @click="showTaskForm()" class="button button-primary">＋ 新建任务</button>
+          </header>
+          <div class="surface rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="section-title"><span>⏱</span><div><h2>任务计划</h2><p>自动删除会将推荐项直接加入删除队列，请谨慎开启</p></div></div>
             <div x-show="loading.tasks" class="space-y-2"><template x-for="i in 3" :key="i"><div class="skeleton h-12 w-full"></div></template></div>
             <div x-show="!loading.tasks" class="space-y-2">
               <template x-for="t in tasks" :key="t.id">
@@ -414,9 +434,9 @@
               </template>
               <div x-show="!tasks.length" class="text-sm text-[var(--text-muted)] py-2">暂无定时任务</div>
             </div>
-            <button @click="showTaskForm()" class="w-full rounded-xl py-2.5 text-sm font-bold border border-dashed border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">+ 新建任务</button>
+            <button @click="showTaskForm()" class="button button-dashed w-full">＋ 新建任务</button>
           </div>
-          <div x-show="taskFormOpen" class="glass rounded-2xl p-5 md:p-6 space-y-4">
+          <div x-show="taskFormOpen" class="surface form-surface rounded-2xl p-5 md:p-6 space-y-4">
             <h2 class="text-lg font-bold" x-text="taskEditId ? '编辑任务' : '新建任务'"></h2>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">任务名称</label><input x-model="taskForm.name" placeholder="每日 AV 查重" class="text-sm"></div>
             <div class="grid grid-cols-2 gap-3">
@@ -436,9 +456,13 @@
         </div>
 
         <!-- ═══ SETTINGS PAGE ═══ -->
-        <div x-show="activePage === 'settings'" class="page-enter grid md:grid-cols-2 gap-5">
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
-            <h2 class="text-lg font-bold">媒体库配置</h2>
+        <div x-show="activePage === 'settings'" class="page-enter settings-page grid md:grid-cols-2 gap-5">
+          <header data-page-heading="settings" class="page-heading md:col-span-2">
+            <div><p class="eyebrow">SYSTEM CONTROL</p><h1>系统配置</h1><p>管理 Emby 连接、推荐规则、删除队列与黑名单。</p></div>
+            <span class="unsaved-hint">修改后请手动保存</span>
+          </header>
+          <div class="surface rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="section-title"><span>01</span><div><h2>媒体库连接</h2><p>凭据仅保存在服务端数据目录</p></div></div>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Emby 地址</label><input x-model="form.host" placeholder="http://ip:8096" class="text-sm"></div>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">用户名</label><input x-model="form.user" class="text-sm"></div>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">密码</label><input type="password" x-model="form.pwd" class="text-sm"></div>
@@ -455,8 +479,8 @@
               <input type="file" accept=".json" x-ref="importFile" @change="importConfig" class="hidden">
             </div>
           </div>
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
-            <h2 class="text-lg font-bold">智能处理偏好</h2>
+          <div class="surface rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="section-title"><span>02</span><div><h2>智能处理偏好</h2><p>定义扫描后默认推荐保留的版本</p></div></div>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">番号推荐规则</label><select x-model="prefs.av_keep_priority" class="text-sm"><option value="rank">破解-C > C > 破解 > 无标签；流出人工确认</option><option value="tag_uc">选 [UC]</option><option value="tag_c">选 [C]</option><option value="tag_raw">选原版</option></select></div>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">同大推荐规则</label><select x-model="prefs.size_keep" class="text-sm"><option value="path_long">最长路径</option><option value="path_short">最短路径</option><option value="name_long">最长名称</option><option value="name_short">最短名称</option></select></div>
             <div><label class="block text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">时长推荐规则</label><select x-model="prefs.duration_keep" class="text-sm"><option value="min">选最小文件</option><option value="max">选最大文件</option></select></div>
@@ -465,8 +489,8 @@
             <label class="flex items-center gap-2 text-sm cursor-pointer pt-1"><input type="checkbox" x-model="prefs.auto_refresh_library" style="width:auto;min-height:auto" class="accent-[var(--primary)]"><span>删除后自动刷新 Emby 媒体库</span></label>
             <button @click="saveConfig" class="w-full rounded-xl py-2 text-sm font-bold border border-[var(--line)] text-[var(--text-muted)] hover:text-[var(--text)] hover:border-[var(--primary)] transition-all">保存偏好</button>
           </div>
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
-            <h2 class="text-lg font-bold">删除队列</h2>
+          <div class="surface rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
+            <div class="section-title"><span>03</span><div><h2>删除队列</h2><p>顺序执行并等待 Emby 确认删除</p></div></div>
             <div x-show="loading.deleteQueue" class="skeleton h-16 w-full"></div>
             <div x-show="!loading.deleteQueue" class="space-y-1">
               <div class="flex flex-wrap gap-1.5 mb-2">
@@ -491,8 +515,8 @@
               <button @click="clearDone" class="filter-btn">清理已完成</button>
             </div>
           </div>
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
-            <h2 class="text-lg font-bold">黑名单管理</h2>
+          <div class="surface rounded-2xl p-5 md:p-6 space-y-3 md:col-span-2">
+            <div class="section-title"><span>04</span><div><h2>黑名单管理</h2><p>被忽略的项目不会再次出现在扫描结果中</p></div></div>
             <div x-show="loading.ignored" class="skeleton h-12 w-full"></div>
             <div x-show="!loading.ignored" class="space-y-1">
               <template x-for="item in ignoredItems" :key="item.id">
@@ -508,9 +532,12 @@
 
         <!-- ═══ STORAGE PAGE ═══ -->
         <div x-show="activePage === 'storage'" class="page-enter space-y-5">
-          <h1 class="text-xl font-black">存储仪表盘</h1>
-          <div class="glass rounded-2xl p-5 md:p-6 space-y-4">
-            <h2 class="text-lg font-bold">按媒体库统计</h2>
+          <header data-page-heading="storage" class="page-heading">
+            <div><p class="eyebrow">STORAGE OBSERVATORY</p><h1>存储仪表盘</h1><p>从媒体库维度查看空间占用与元数据完整度。</p></div>
+            <div class="storage-total"><span>总占用</span><strong x-text="bytes(status.total_storage)"></strong></div>
+          </header>
+          <div class="surface rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="section-title"><span>◫</span><div><h2>按媒体库统计</h2><p>条形长度代表各媒体库的相对占用</p></div></div>
             <div x-show="loading.storage" class="space-y-3"><template x-for="i in 4" :key="i"><div class="skeleton h-16 w-full"></div></template></div>
             <div x-show="!loading.storage" class="space-y-3">
               <template x-for="stat in storageStats" :key="stat.library_id || stat.library_name">
@@ -530,13 +557,13 @@
 
         <!-- ═══ LOGS PAGE ═══ -->
         <div x-show="activePage === 'logs'" class="page-enter space-y-4">
-          <div class="flex items-center justify-between">
-            <h1 class="text-xl font-black">系统日志</h1>
+          <header data-page-heading="logs" class="page-heading">
+            <div><p class="eyebrow">LIVE ACTIVITY</p><h1>系统日志</h1><p>实时查看同步、扫描、删除与计划任务的执行状态。</p></div>
             <div class="flex gap-2">
               <button @click="logAutoScroll = !logAutoScroll" class="filter-btn" :class="{active: logAutoScroll}">自动滚动</button>
               <button @click="clearLogs" class="filter-btn">清空</button>
             </div>
-          </div>
+          </header>
           <div x-ref="logViewer" class="log-viewer">
             <template x-for="(line, i) in logLines" :key="i">
               <div x-text="line" :class="line.includes('[ERROR]') ? 'text-[var(--danger)]' : (line.includes('[WARNING]') ? 'text-[var(--warn)]' : '')"></div>
@@ -549,7 +576,7 @@
     </main>
 
     <!-- MOBILE BOTTOM NAV -->
-    <nav class="fixed bottom-0 left-0 right-0 z-30 md:hidden glass-strong px-2 py-1 flex justify-around">
+    <nav aria-label="移动端导航" class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-30 md:hidden px-2 py-1 flex justify-around">
       <template x-for="item in navItems" :key="item.id">
         <button @click="navigate(item.id); sidebarOpen = false"
                 class="flex flex-col items-center py-1.5 px-2 rounded-lg transition-colors min-w-0"
