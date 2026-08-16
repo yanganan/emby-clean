@@ -123,8 +123,9 @@ send it as `X-API-Key`. Do not expose the service directly to the public
 internet.
 
 The service only uses the Emby API and read-only media/source inspection. It
-does not write MDC/NFO/image metadata and does not delete STRM or remote source
-files. Deletion is an explicit Emby-item action; the default is a dry-run plan.
+does not write MDC/NFO/image metadata or delete STRM/remote source files; an
+explicitly confirmed Emby item may still be deleted through the Emby API.
+Deletion is an explicit Emby-item action; the default is a dry-run plan.
 
 New inspection modes include `image`, `media_health`, `strm_health`,
 `source_dupe`, and `content_dupe`. A FUSE/115 path that is temporarily

@@ -26,6 +26,7 @@ if (new Set(flat).size !== items.length) throw new Error('page overlap');
     def test_result_page_handles_rejected_delete_without_removing_rows(self):
         html = Path("app/static/index.html").read_text(encoding="utf-8")
         self.assertIn("d.status==='rejected'", html)
+        self.assertIn("应用不会删除 STRM 或远程源文件", html)
         self.assertIn("EmbyCleanPagination", html)
         self.assertIn("i.tag_4k?'4K'", html)
 

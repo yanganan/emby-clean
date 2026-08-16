@@ -20,8 +20,12 @@ def delete_request_decision(
 ) -> dict[str, str]:
     if dry_run or not confirm:
         return {"status": "dry_run", "reason": "需要显式 confirm=true 且 dry_run=false"}
-    if source_type in {"strm", "remote_reference"}:
-        return {"status": "rejected", "reason": "远程/STRM 源文件禁止隐式删除"}
     if object_type != "emby_item":
-        return {"status": "rejected", "reason": "当前只允许显式处理 Emby 条目"}
-    return {"status": "approved", "reason": "已通过显式确认"}
+        return {
+            "status": "rejected",
+            "reason": "当前只允许通过 Emby API 处理 Emby 条目，不执行 STRM/远程源文件删除",
+        }
+    return {
+        "status": "approved",
+        "reason": "已通过显式确认，将由 Emby API 删除条目；本应用不处理源文件",
+    }

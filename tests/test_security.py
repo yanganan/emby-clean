@@ -20,10 +20,20 @@ class SecurityTests(unittest.TestCase):
         self.assertEqual(decision["status"], "dry_run")
         self.assertIn("confirm", decision["reason"])
 
-    def test_remote_source_delete_is_never_allowed(self):
+    def test_strm_backed_emby_item_delete_is_allowed(self):
         decision = delete_request_decision(confirm=True, dry_run=False, source_type="strm")
+        self.assertEqual(decision["status"], "approved")
+        self.assertIn("Emby", decision["reason"])
+
+    def test_strm_file_delete_is_still_rejected(self):
+        decision = delete_request_decision(
+            confirm=True,
+            dry_run=False,
+            source_type="strm",
+            object_type="strm_file",
+        )
         self.assertEqual(decision["status"], "rejected")
-        self.assertIn("远程", decision["reason"])
+        self.assertIn("Emby", decision["reason"])
 
 
 if __name__ == "__main__":

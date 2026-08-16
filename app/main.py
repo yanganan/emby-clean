@@ -422,7 +422,7 @@ def queue_deletes(
     dry_run: bool = True,
     object_type: str = "emby_item",
 ) -> int:
-    """Queue only explicitly confirmed, non-remote Emby item deletions."""
+    """Queue explicitly confirmed Emby item deletions; source files stay untouched."""
     plan = plan_deletes(ids)
     if not plan:
         return 0
@@ -978,7 +978,12 @@ async def dele_post(req: DeleteRequest) -> dict[str, Any]:
     if rejected:
         with connect() as db:
             audit_id = record_audit(db, "delete_rejected", req.object_type, "", {"items": rejected})
-        return {"status": "rejected", "rejected": rejected, "audit_id": audit_id, "message": "存在不允许删除的远程/STRM源"}
+        return {
+            "status": "rejected",
+            "rejected": rejected,
+            "audit_id": audit_id,
+            "message": "仅允许通知 Emby 删除条目，不执行 STRM/远程源文件删除",
+        }
     queued = queue_deletes(req.ids, confirm=req.confirm, dry_run=req.dry_run, object_type=req.object_type)
     skipped = len(req.ids) - queued
     log("DELETE", f"加入删除队列：新增 {queued} 条，跳过 {skipped} 条")
