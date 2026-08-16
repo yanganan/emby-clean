@@ -8,6 +8,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from .fingerprints import fingerprint_media
+from .inventory import inspect_source
+from .rules import (
+    legacy_library_rules,
+    normalize_variant_key as normalize_rule_key,
+    western_match,
+)
 from .store import now_ts
 
 
@@ -60,6 +67,14 @@ def item_from_emby(
         "name": raw.get("Name") or "",
         "sort_name": raw.get("SortName") or raw.get("Name") or "",
         "path": path,
+        "source_type": "strm" if path.lower().endswith(".strm") else ("local_file" if path else "unknown"),
+        "source_ref": path,
+        "source_status": "unknown",
+        "source_reason": "",
+        "source_size": size,
+        "source_mtime": 0,
+        "source_sha256": "",
+        "image_hash": image_tag,
         "parent_id": parent_id,
         "series_id": str(raw.get("SeriesId") or ""),
         "series_name": raw.get("SeriesName") or "",
@@ -123,21 +138,30 @@ def scan(db: sqlite3.Connection, mode: str, libs: list[str], params: dict[str, s
     # New "report" modes that don't need the is_media filter or grouping
     if mode in {"nometa", "nosub", "emptylib"}:
         return _scan_report(db, mode, libs, rows, ignored_items)
+    if mode in {"image", "media_health", "strm_health", "source_dupe", "content_dupe"}:
+        return _scan_integrity(db, mode, libs, rows, ignored_items)
 
     rows = [r for r in rows if r["emby_id"] not in ignored_items and r["is_media"]]
     grouped: dict[str, list[sqlite3.Row]] = defaultdict(list)
     group_meta: dict[str, dict[str, Any]] = {}
+    row_match_meta: dict[str, dict[str, Any]] = {}
 
     if mode == "av":
         for row in rows:
-            key = av_key(row)
+            match = match_row(row, mode)
+            key = match["key"]
             if key:
                 grouped[key].append(row)
+                row_match_meta[row["emby_id"]] = match
+                group_meta.setdefault(key, match_group_meta(match))
     elif mode == "smart":
         for row in rows:
-            key = smart_key(row)
+            match = match_row(row, mode)
+            key = match["key"]
             if key:
                 grouped[key].append(row)
+                row_match_meta[row["emby_id"]] = match
+                group_meta.setdefault(key, match_group_meta(match))
     elif mode == "size":
         for row in rows:
             if row["size"]:
@@ -175,8 +199,8 @@ def scan(db: sqlite3.Connection, mode: str, libs: list[str], params: dict[str, s
             continue
         if mode in {"av", "smart", "size", "duration"} and len(items) < 2:
             continue
-        normalized = [decorate_item(dict(item), mode) for item in items]
-        apply_recommendations(normalized, mode, prefs)
+        normalized = [decorate_item(dict(item), mode, row_match_meta.get(item["emby_id"])) for item in items]
+        apply_recommendations(normalized, mode, prefs, group_meta.get(key, {}))
         title = group_title(mode, key, normalized, group_meta.get(key, {}))
         result.append(
             {
@@ -299,6 +323,161 @@ def _scan_report(
     return result
 
 
+def _scan_integrity(
+    db: sqlite3.Connection,
+    mode: str,
+    libs: list[str],
+    rows: list[sqlite3.Row],
+    ignored_items: set[str],
+) -> list[dict[str, Any]]:
+    """Run read-only source, media and image checks.
+
+    An unavailable mount is reported as an unavailable source, never as a
+    missing/deletable media item.
+    """
+    filtered = [r for r in rows if r["emby_id"] not in ignored_items and r["is_media"]]
+    if libs:
+        lib_set = set(libs)
+        filtered = [r for r in filtered if r["library_id"] in lib_set]
+    grouped: dict[str, list[sqlite3.Row]] = defaultdict(list)
+    meta: dict[str, dict[str, Any]] = {}
+
+    for row in filtered:
+        key = ""
+        reason = ""
+        evidence: dict[str, Any] = {}
+        matcher = mode
+        if mode == "image":
+            image_tag = row["primary_image_tag"] or ""
+            if not image_tag:
+                key = f"image:missing:{row['emby_id']}"
+                reason = "缺失封面"
+                matcher = "image_missing"
+            else:
+                key = f"image:tag:{image_tag}"
+                evidence = {"primary_image_tag": image_tag}
+                matcher = "image_exact_tag"
+        elif mode == "media_health":
+            missing = []
+            if not row["path"]:
+                missing.append("路径")
+            if not row["size"]:
+                missing.append("大小")
+            if not row["duration_seconds"]:
+                missing.append("时长")
+            if not row["resolution"]:
+                missing.append("分辨率")
+            if missing:
+                key = f"media_health:{row['emby_id']}"
+                reason = "缺失媒体字段：" + "、".join(missing)
+                evidence = {"missing_fields": missing}
+                matcher = "media_metadata_health"
+        elif mode == "content_dupe":
+            fingerprint = fingerprint_media(row["path"] or "", row["item_type"] or "")
+            if fingerprint["status"] == "ready":
+                key = f"content:{fingerprint['algorithm']}:{fingerprint['value']}"
+                evidence = {"algorithm": fingerprint["algorithm"], "fingerprint": fingerprint["value"]}
+                matcher = "content_fingerprint"
+                db.execute(
+                    """
+                    insert into fingerprints(emby_id,kind,algorithm,value,source_ref,source_mtime,source_size,status,created_at,updated_at)
+                    values(?,?,?,?,?,?,?,?,?,?)
+                    on conflict(emby_id,kind,algorithm) do update set
+                      value=excluded.value,source_ref=excluded.source_ref,source_mtime=excluded.source_mtime,
+                      source_size=excluded.source_size,status=excluded.status,updated_at=excluded.updated_at
+                    """,
+                    (row["emby_id"], "content", fingerprint["algorithm"], fingerprint["value"], row["path"] or "", 0, row["size"] or 0, "ready", now_ts(), now_ts()),
+                )
+            else:
+                key = f"content_health:{row['emby_id']}"
+                reason = "内容指纹不可用：" + fingerprint["reason"]
+                evidence = {"status": fingerprint["status"], "reason": fingerprint["reason"]}
+                matcher = "content_fingerprint_health"
+        else:
+            inventory = inspect_source(row["path"] or "")
+            db.execute(
+                """
+                update media_items
+                set source_type=?,source_ref=?,source_status=?,source_reason=?,source_size=?,source_mtime=?
+                where emby_id=?
+                """,
+                (
+                    inventory["source_type"], inventory["source_ref"], inventory["status"],
+                    inventory["reason"], inventory["size"], inventory["mtime"], row["emby_id"],
+                ),
+            )
+            if inventory["status"] != "readable":
+                if mode == "strm_health" or inventory["source_type"] == "strm":
+                    key = f"strm_health:{row['emby_id']}"
+                    reason = "STRM/源路径不可用：" + (inventory["reason"] or inventory["status"])
+                    evidence = {"status": inventory["status"], "reason": inventory["reason"]}
+                    matcher = "strm_source_health"
+            elif mode == "source_dupe" and inventory["source_ref"]:
+                key = f"source:{inventory['source_ref']}"
+                evidence = {"source_ref": inventory["source_ref"]}
+                matcher = "source_exact_reference"
+                db.execute(
+                    """
+                    insert into fingerprints(emby_id,kind,algorithm,value,source_ref,source_mtime,source_size,status,created_at,updated_at)
+                    values(?,?,?,?,?,?,?,?,?,?)
+                    on conflict(emby_id,kind,algorithm) do update set
+                      value=excluded.value,source_ref=excluded.source_ref,source_mtime=excluded.source_mtime,
+                      source_size=excluded.source_size,status=excluded.status,updated_at=excluded.updated_at
+                    """,
+                    (row["emby_id"], "source", "canonical_ref", inventory["source_ref"], inventory["source_ref"], inventory["mtime"], inventory["size"], "ready", now_ts(), now_ts()),
+                )
+        if key:
+            grouped[key].append(row)
+            meta.setdefault(
+                key,
+                {
+                    "matcher": matcher,
+                    "confidence": "exact" if matcher in {"image_exact_tag", "source_exact_reference"} else "review",
+                    "evidence": evidence,
+                },
+            )
+
+    result = []
+    for key, items in grouped.items():
+        if mode in {"image", "source_dupe", "content_dupe"} and len(items) < 2 and not key.startswith(("image:missing:", "strm_health:", "content_health:")):
+            continue
+        normalized = []
+        for raw in items:
+            item = decorate_item(dict(raw), mode)
+            item["recommend_action"] = "review"
+            item["recommend_reason"] = (
+                "发现重复封面/源引用/内容指纹，需确认是否为同一媒体"
+                if len(items) > 1 else "".join(meta.get(key, {}).get("evidence", {}).get("missing_fields", [])) or "需要检查"
+            )
+            normalized.append(item)
+        result.append(
+            {
+                "title": integrity_group_title(mode, key, normalized, meta.get(key, {})),
+                "group_key": key,
+                "ignore_scope": "item",
+                "group_meta": meta.get(key, {}),
+                "items": normalized,
+                "summary": {"keep": 0, "delete": 0, "review": len(normalized), "total": len(normalized)},
+            }
+        )
+    result.sort(key=lambda group: (group["title"], group["group_key"]))
+    return result
+
+
+def integrity_group_title(mode: str, key: str, items: list[dict[str, Any]], meta: dict[str, Any]) -> str:
+    if mode == "image" and key.startswith("image:missing:"):
+        return "缺失封面"
+    if mode == "media_health":
+        return "媒体字段缺失"
+    if mode == "strm_health":
+        return "STRM/源路径不可用（不等于资源缺失）"
+    if mode == "source_dupe":
+        return "相同源引用"
+    if mode == "content_dupe":
+        return "相同内容指纹"
+    return key
+
+
 def load_items(db: sqlite3.Connection, libs: list[str]) -> list[sqlite3.Row]:
     if libs:
         placeholders = ",".join("?" for _ in libs)
@@ -330,24 +509,49 @@ def av_key(row: sqlite3.Row) -> str:
     return ""
 
 
+def match_row(row: Any, mode: str) -> dict[str, Any]:
+    """Return a compatibility-aware match result for one media row."""
+    if legacy_library_rules(row):
+        key = av_key(row) if mode == "av" else _legacy_smart_key(row)
+        return {
+            "key": key,
+            "matcher": "legacy_av" if mode == "av" else "legacy_smart",
+            "confidence": "legacy",
+            "evidence": {"library_name": row["library_name"] if "library_name" in row.keys() else ""},
+            "source_type": "strm" if str(row["path"] or "").lower().endswith(".strm") else "local_file",
+            "profile": "legacy",
+        }
+    result = western_match(row, mode)
+    result["profile"] = "modern"
+    return result
+
+
+def match_group_meta(match: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "matcher": match.get("matcher", "none"),
+        "confidence": match.get("confidence", "none"),
+        "evidence": match.get("evidence", {}),
+        "source_type": match.get("source_type", "unknown"),
+        "profile": match.get("profile", "modern"),
+    }
+
+
 def smart_key(row: sqlite3.Row) -> str:
+    return match_row(row, "smart")["key"]
+
+
+def _legacy_smart_key(row: Any) -> str:
     if row["provider_key"]:
         return "provider:" + row["provider_key"]
     name = row["series_name"] or row["sort_name"] or row["name"]
-    return normalize_variant_key(name)
+    return normalize_rule_key(name)
 
 
 def normalize_variant_key(text: str) -> str:
-    text = os.path.splitext(os.path.basename(text or ""))[0] or text or ""
-    text = QUALITY_WORDS.sub(" ", text)
-    text = VARIANT_WORDS.sub(" ", text)
-    text = re.sub(r"(?i)[\[\(【（][^\]\)】）]*(?:4k|1080p|720p|uc|中字|字幕|无码|流出|泄露)[^\]\)】）]*[\]\)】）]", " ", text)
-    text = re.sub(r"(?i)(?:[-_.\s]+(?:c|uc|u|4k|1080p|720p|cd\d+|part\d+|disc\d+))+$", " ", text)
-    text = re.sub(r"[\W_]+", " ", text, flags=re.U).strip().lower()
-    return text
+    return normalize_rule_key(text)
 
 
-def decorate_item(item: dict[str, Any], mode: str) -> dict[str, Any]:
+def decorate_item(item: dict[str, Any], mode: str, match: dict[str, Any] | None = None) -> dict[str, Any]:
     tags = json.loads(item.get("tags") or "[]")
     name_path = f"{item.get('name','')} {item.get('path','')}".lower()
     item["tag_c"] = bool(TAG_C_RE.search(name_path)) or "[c]" in name_path or "中文字幕" in name_path or any(str(t).lower() in {"c", "中字", "中文字幕"} for t in tags)
@@ -362,13 +566,49 @@ def decorate_item(item: dict[str, Any], mode: str) -> dict[str, Any]:
     item["duration"] = float(item.get("duration_seconds") or 0)
     item["display_path"] = str(Path(item.get("path") or "").parent) + "/" if item.get("path") else ""
     item["mode"] = mode
+    if match:
+        item["match_matcher"] = match.get("matcher", "none")
+        item["match_confidence"] = match.get("confidence", "none")
+        item["match_evidence"] = match.get("evidence", {})
+        item["source_type"] = match.get("source_type", "unknown")
     # Preserve media info fields for frontend display
     item.pop("raw_json", None)
     item.pop("tags", None)
     return item
 
 
-def apply_recommendations(items: list[dict[str, Any]], mode: str, prefs: dict[str, Any]) -> None:
+def apply_recommendations(
+    items: list[dict[str, Any]],
+    mode: str,
+    prefs: dict[str, Any],
+    group_meta: dict[str, Any] | None = None,
+) -> None:
+    group_meta = group_meta or {}
+    if group_meta.get("profile") == "modern":
+        confidence = group_meta.get("confidence", "none")
+        if confidence not in {"exact", "high"}:
+            for item in items:
+                item["recommend_action"] = "review"
+                item["recommend_reason"] = "中/低置信度候选，仅建议人工复核"
+            return
+        has_quality = any(
+            (item.get("resolution") or 0) or (item.get("size") or 0) or (item.get("duration") or 0)
+            for item in items
+        )
+        if not has_quality and group_meta.get("source_type") == "strm" and confidence != "exact":
+            for item in items:
+                item["recommend_action"] = "review"
+                item["recommend_reason"] = "STRM 缺少大小/时长/分辨率，无法安全选优"
+            return
+        keep_id = pick_quality(items)
+        for item in items:
+            if item["emby_id"] == keep_id:
+                item["recommend_action"] = "keep"
+                item["recommend_reason"] = "按可用媒体质量与来源信息建议保留"
+            else:
+                item["recommend_action"] = "delete"
+                item["recommend_reason"] = "同一高置信度媒体候选组"
+        return
     keep_id = ""
     if mode == "av":
         keep_id = pick_best_version(items)
@@ -437,6 +677,20 @@ def pick_smallest(items: list[dict[str, Any]]) -> str:
 def pick_resolution(items: list[dict[str, Any]], highest: bool = True) -> str:
     fn = max if highest else min
     return fn(items, key=lambda i: (i.get("resolution") or 0, i.get("size") or 0))["emby_id"] if items else ""
+
+
+def pick_quality(items: list[dict[str, Any]]) -> str:
+    """Pick a best candidate without treating missing metadata as quality."""
+    return max(
+        items,
+        key=lambda i: (
+            i.get("resolution") or 0,
+            i.get("bitrate") or 0,
+            i.get("duration") or 0,
+            i.get("size") or 0,
+            len(i.get("path") or ""),
+        ),
+    )["emby_id"] if items else ""
 
 
 def pick_by_name_path(items: list[dict[str, Any]], rule: str) -> str:

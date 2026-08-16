@@ -14,7 +14,9 @@ DB_PATH = DATA_DIR / "emby_clean.db"
 BACKUP_PATH = DATA_DIR / "config_backup.json"
 
 # Config keys that are safe to backup/restore
-_BACKUP_CONFIG_KEYS = ["host", "user", "pwd", "access_token", "user_id", "webhook", "cron_sync", "prefs"]
+# Secrets are intentionally excluded. A backup must be portable and safe to
+# download; credentials are re-authenticated after restore instead.
+_BACKUP_CONFIG_KEYS = ["host", "user", "webhook", "cron_sync", "prefs"]
 _BACKUP_STAT_KEYS = ["server_id", "server_name", "server_ver", "user_name", "cleaned_count", "saved_space"]
 
 
@@ -27,6 +29,7 @@ DEFAULT_PREFS = {
     "smart_keep": "reso_max",
     "confirm_batch": "true",
     "auto_refresh_library": True,
+    "allow_auto_delete": False,
     "delete_retry_max": 3,
     "delete_retry_delay": 10,
 }
@@ -141,6 +144,50 @@ def init_db() -> None:
               key text primary key,
               value text not null
             );
+
+            create table if not exists schema_meta (
+              key text primary key,
+              value text not null
+            );
+
+            create table if not exists jobs (
+              id text primary key,
+              job_type text not null,
+              status text not null,
+              params text not null default '{}',
+              progress integer not null default 0,
+              total integer not null default 0,
+              result_count integer not null default 0,
+              result_json text not null default '[]',
+              error text,
+              created_at integer not null,
+              started_at integer,
+              finished_at integer,
+              updated_at integer not null
+            );
+
+            create table if not exists audit_log (
+              id integer primary key autoincrement,
+              action text not null,
+              target_type text not null,
+              target_id text not null default '',
+              payload text not null default '{}',
+              created_at integer not null
+            );
+
+            create table if not exists fingerprints (
+              emby_id text not null,
+              kind text not null,
+              algorithm text not null,
+              value text not null,
+              source_ref text not null default '',
+              source_mtime real not null default 0,
+              source_size integer not null default 0,
+              status text not null default 'ready',
+              created_at integer not null,
+              updated_at integer not null,
+              primary key (emby_id, kind, algorithm)
+            );
             """
         )
         ensure_column(db, "media_items", "date_created", "text")
@@ -160,6 +207,20 @@ def init_db() -> None:
         ensure_column(db, "delete_queue", "retry_count", "integer default 0")
         ensure_column(db, "tasks", "auto_delete", "integer not null default 0")
         ensure_column(db, "tasks", "last_deleted", "integer default 0")
+        ensure_column(db, "media_items", "source_type", "text")
+        ensure_column(db, "media_items", "source_ref", "text")
+        ensure_column(db, "media_items", "source_status", "text")
+        ensure_column(db, "media_items", "source_reason", "text")
+        ensure_column(db, "media_items", "source_size", "integer default 0")
+        ensure_column(db, "media_items", "source_mtime", "real default 0")
+        ensure_column(db, "media_items", "source_sha256", "text")
+        ensure_column(db, "media_items", "image_hash", "text")
+        ensure_column(db, "delete_queue", "object_type", "text default 'emby_item'")
+        ensure_column(db, "delete_queue", "dry_run", "integer default 1")
+        ensure_column(db, "delete_queue", "confirmed", "integer default 0")
+        ensure_column(db, "delete_queue", "audit_id", "integer")
+        ensure_column(db, "jobs", "result_json", "text not null default '[]'")
+        set_config_value(db, "schema_version", 2)
         db.execute("update libraries set api_count = item_count where coalesce(api_count,0) = 0")
         db.execute(
             """
@@ -249,6 +310,38 @@ def get_stat(db: sqlite3.Connection, key: str, default: Any = None) -> Any:
 
 def now_ts() -> int:
     return int(time.time())
+
+
+def record_audit(
+    db: sqlite3.Connection,
+    action: str,
+    target_type: str,
+    target_id: str = "",
+    payload: Any = None,
+) -> int:
+    cur = db.execute(
+        "insert into audit_log(action,target_type,target_id,payload,created_at) values(?,?,?,?,?)",
+        (action, target_type, target_id, encode(payload or {}), now_ts()),
+    )
+    return int(cur.lastrowid or 0)
+
+
+def create_job(db: sqlite3.Connection, job_id: str, job_type: str, params: Any = None) -> None:
+    timestamp = now_ts()
+    db.execute(
+        "insert into jobs(id,job_type,status,params,created_at,updated_at) values(?,?,?,?,?,?)",
+        (job_id, job_type, "queued", encode(params or {}), timestamp, timestamp),
+    )
+
+
+def update_job(db: sqlite3.Connection, job_id: str, **fields: Any) -> None:
+    allowed = {"status", "progress", "total", "result_count", "result_json", "error", "started_at", "finished_at"}
+    updates = {key: value for key, value in fields.items() if key in allowed}
+    if not updates:
+        return
+    updates["updated_at"] = now_ts()
+    clause = ",".join(f"{key}=?" for key in updates)
+    db.execute(f"update jobs set {clause} where id=?", [*updates.values(), job_id])
 
 
 def ensure_column(db: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
