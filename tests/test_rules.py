@@ -5,6 +5,7 @@ from app.scanner import (
     legacy_library_rules,
     match_row,
     normalize_variant_key,
+    refine_match_group_meta,
 )
 
 
@@ -34,14 +35,14 @@ class DuplicateRuleTests(unittest.TestCase):
         normalized = normalize_variant_key("DorcelClub.15.01.01 Pornochic 1080p.strm")
         self.assertIn("dorcelclub 15 01 01", normalized)
 
-    def test_western_scene_matcher_uses_full_code(self):
+    def test_western_release_date_matcher_keeps_full_code_and_identity(self):
         result = match_row(
             row(name="DorcelClub.15.01.01 Pornochic 1080p.strm"),
             "av",
         )
-        self.assertEqual(result["matcher"], "western_scene_code")
-        self.assertEqual(result["confidence"], "high")
-        self.assertEqual(result["key"], "western:dorcelclub:15.01.01")
+        self.assertEqual(result["matcher"], "western_release_date")
+        self.assertEqual(result["confidence"], "medium")
+        self.assertTrue(result["key"].startswith("western:dorcelclub:15.01.01:release:"))
 
     def test_short_number_requires_site_context(self):
         result = match_row(
@@ -74,6 +75,75 @@ class DuplicateRuleTests(unittest.TestCase):
             {"profile": "modern", "confidence": "high", "source_type": "strm"},
         )
         self.assertEqual({item["recommend_action"] for item in items}, {"review"})
+
+    def test_release_date_code_does_not_merge_different_titles(self):
+        first = match_row(
+            row(
+                name="WowGirls.19.01.01 Angels Fuck.strm",
+                path="/media/欧美合集/Emmy Accel,Eva Elfie/WowGirls.19.01.01-4K Emmy Accel,Eva Elfie/WowGirls.19.01.01-4K.strm",
+            ),
+            "av",
+        )
+        second = match_row(
+            row(
+                name="WowGirls.19.01.01 Busty In A Love Session.strm",
+                path="/media/欧美合集/Eva Elfie,Sybil/WowGirls.19.01.01-4K Eva Elfie,Sybil/WowGirls.19.01.01-4K.strm",
+            ),
+            "av",
+        )
+        self.assertEqual(first["matcher"], "western_release_date")
+        self.assertNotEqual(first["key"], second["key"])
+        self.assertEqual(first["evidence"]["code_kind"], "release_date")
+
+    def test_release_date_code_groups_same_title_and_performers(self):
+        first = match_row(
+            row(
+                name="Blacked.19.04.15 Off Limits.strm",
+                path="/media/欧美合集/Emma Starletto/Blacked.19.04.15-4K Emma Starletto/Blacked.19.04.15-4K.strm",
+            ),
+            "av",
+        )
+        second = match_row(
+            row(
+                name="Blacked.19.04.15 Off Limits.strm",
+                path="/media/欧美合集/Emma Starletto/Blacked.19.04.15-C Emma Starletto/Blacked.19.04.15-C.strm",
+            ),
+            "av",
+        )
+        self.assertEqual(first["key"], second["key"])
+        self.assertEqual(first["confidence"], "medium")
+
+    def test_release_date_code_separates_same_title_different_performers(self):
+        first = match_row(
+            row(
+                name="Vixen.17.12.15 One Night Stand Sex Tape.strm",
+                path="/media/欧美合集/バニー・茜・コルビー/Vixen.17.12.15-4K バニー・茜・コルビー/Vixen.17.12.15-4K.strm",
+            ),
+            "av",
+        )
+        second = match_row(
+            row(
+                name="Vixen.17.12.15 One Night Stand Sex Tape.strm",
+                path="/media/欧美合集/Nadya Nabakova/Vixen.17.12.15 Nadya Nabakova/Vixen.17.12.15.strm",
+            ),
+            "av",
+        )
+        self.assertNotEqual(first["key"], second["key"])
+
+    def test_release_date_group_confidence_requires_same_title_and_performers(self):
+        items = [{"emby_id": "1"}, {"emby_id": "2"}]
+        row_match_meta = {
+            "1": {"evidence": {"title_signature": "off-limits", "performer_signature": "emma-starletto"}},
+            "2": {"evidence": {"title_signature": "off-limits", "performer_signature": "emma-starletto"}},
+        }
+        meta = {"matcher": "western_release_date", "confidence": "medium", "evidence": {"scene_code": "19.04.15"}}
+        refine_match_group_meta(meta, items, row_match_meta)
+        self.assertEqual(meta["confidence"], "high")
+
+        row_match_meta["2"]["evidence"]["title_signature"] = "translated-off-limits"
+        refine_match_group_meta(meta, items, row_match_meta)
+        self.assertEqual(meta["confidence"], "medium")
+        self.assertEqual(len(meta["evidence"]["title_signatures"]), 2)
 
 
 if __name__ == "__main__":

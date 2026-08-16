@@ -22,6 +22,7 @@ VARIANT_WORDS = re.compile(
     r"(?i)(?:^|[\s._-])(?:c|uc|u|uncensored|chinese|subtitle|sub|字幕|中字|无码|無碼|流出|泄露|leak|cd\d+|part\d+|disc\d+)(?=$|[\s._-])"
 )
 SCENE_CODE = re.compile(r"(?<!\d)(\d{2,4}(?:[._-]\d{1,4}){2,3})(?!\d)")
+RELEASE_DATE_CODE = re.compile(r"^(?:\d{2}|\d{4})\.(?:0[1-9]|1[0-2])\.(?:0[1-9]|[12]\d|3[01])$")
 LEADING_NUMBER = re.compile(r"^\s*(\d{1,5})(?=[\s._-]|$)")
 GENERIC_CONTEXT = {
     "media", "video", "videos", "movie", "movies", "tv", "series", "shows",
@@ -106,6 +107,58 @@ def source_type(row: Any) -> str:
     return "unknown"
 
 
+def _suffix_after_code(text: str, raw_code: str) -> str:
+    """Return the text after a scene code, accepting dot/underscore/hyphen separators."""
+    pattern = re.escape(str(raw_code or "")).replace(r"\.", r"[._-]")
+    match = re.search(pattern, str(text or ""), re.I)
+    return str(text or "")[match.end():] if match else ""
+
+
+def _scene_identity_component(text: str) -> str:
+    return re.sub(r"\s+", "-", str(text or "").strip()) or "unknown"
+
+
+def _release_date_match(row: Any, stem: str, site: str, raw_code: str, code: str) -> dict[str, Any]:
+    """Use title + performer context when dotted numbers are release dates.
+
+    Many western libraries use ``YY.MM.DD`` in the filename. It is a release
+    date, not a unique scene id, so site + date alone can merge unrelated
+    scenes. Performer context comes from the scene directory and prevents
+    same-title releases with different performers from becoming duplicates.
+    """
+    title_signature = normalize_variant_key(_suffix_after_code(stem, raw_code))
+    scene_dir = Path(str(value(row, "path", ""))).parent.name
+    performer_signature = normalize_variant_key(_suffix_after_code(scene_dir, raw_code))
+    if performer_signature == normalize_site(site):
+        performer_signature = ""
+    if not title_signature and not performer_signature:
+        return {
+            "key": "",
+            "matcher": "western_release_date_unidentified",
+            "confidence": "none",
+            "evidence": {"site": site, "scene_code": code, "code_kind": "release_date"},
+            "source_type": source_type(row),
+        }
+    confidence = "medium"
+    identity_kind = "performer" if performer_signature else "title"
+    identity = performer_signature or title_signature
+    key = f"western:{site}:{code}:release:{identity_kind}:{_scene_identity_component(identity)}"
+    return {
+        "key": key,
+        "matcher": "western_release_date",
+        "confidence": confidence,
+        "evidence": {
+            "site": site,
+            "scene_code": code,
+            "code_kind": "release_date",
+            "title_signature": title_signature,
+            "performer_signature": performer_signature,
+            "name": str(value(row, "name", "")),
+        },
+        "source_type": source_type(row),
+    }
+
+
 def western_match(row: Any, mode: str = "smart") -> dict[str, Any]:
     """Return a structured match result for non-legacy libraries."""
     name = str(value(row, "name", ""))
@@ -128,7 +181,10 @@ def western_match(row: Any, mode: str = "smart") -> dict[str, Any]:
         site_match = re.search(r"([A-Za-z][A-Za-z0-9]*|[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*)$", prefix)
         site = normalize_site(site_match.group(1) if site_match else path_context(path))
         if site:
-            code = re.sub(r"[-_]", ".", scene_match.group(1))
+            raw_code = scene_match.group(1)
+            code = re.sub(r"[-_]", ".", raw_code)
+            if RELEASE_DATE_CODE.fullmatch(code):
+                return _release_date_match(row, stem, site, raw_code, code)
             return {
                 "key": f"western:{site}:{code}",
                 "matcher": "western_scene_code",

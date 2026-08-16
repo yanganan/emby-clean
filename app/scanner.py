@@ -199,15 +199,17 @@ def scan(db: sqlite3.Connection, mode: str, libs: list[str], params: dict[str, s
             continue
         if mode in {"av", "smart", "size", "duration"} and len(items) < 2:
             continue
+        meta = group_meta.get(key, {})
+        refine_match_group_meta(meta, items, row_match_meta)
         normalized = [decorate_item(dict(item), mode, row_match_meta.get(item["emby_id"])) for item in items]
-        apply_recommendations(normalized, mode, prefs, group_meta.get(key, {}))
-        title = group_title(mode, key, normalized, group_meta.get(key, {}))
+        apply_recommendations(normalized, mode, prefs, meta)
+        title = group_title(mode, key, normalized, meta)
         result.append(
             {
                 "title": title,
                 "group_key": key,
                 "ignore_scope": "group" if mode == "duration" else "item",
-                "group_meta": group_meta.get(key, {}),
+                "group_meta": meta,
                 "items": normalized,
                 "summary": {
                     "keep": sum(1 for i in normalized if i.get("recommend_action") == "keep"),
@@ -536,6 +538,31 @@ def match_group_meta(match: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def refine_match_group_meta(
+    meta: dict[str, Any],
+    items: list[sqlite3.Row],
+    row_match_meta: dict[str, dict[str, Any]],
+) -> None:
+    """Downgrade date-code groups when title/performer identity is ambiguous."""
+    if meta.get("matcher") != "western_release_date":
+        return
+    evidences = [
+        row_match_meta.get(str(item["emby_id"]), {}).get("evidence", {})
+        for item in items
+    ]
+    titles = {str(e.get("title_signature") or "") for e in evidences}
+    performers = {str(e.get("performer_signature") or "") for e in evidences}
+    evidence = dict(meta.get("evidence") or {})
+    evidence["title_signatures"] = sorted(titles)
+    evidence["performer_signatures"] = sorted(performers)
+    meta["evidence"] = evidence
+    meta["confidence"] = (
+        "high"
+        if len(titles) == 1 and len(performers) == 1 and "" not in titles and "" not in performers
+        else "medium"
+    )
+
+
 def smart_key(row: sqlite3.Row) -> str:
     return match_row(row, "smart")["key"]
 
@@ -708,6 +735,15 @@ def group_title(mode: str, key: str, items: list[dict[str, Any]], meta: dict[str
         return "缺失封面"
     if mode == "tiny":
         return "极小文件"
+    if meta.get("matcher") == "western_release_date":
+        evidence = meta.get("evidence") or {}
+        title_signatures = evidence.get("title_signatures") or []
+        identity = (
+            "多个标题待确认"
+            if len(title_signatures) > 1
+            else evidence.get("title_signature") or evidence.get("performer_signature") or "待确认身份"
+        )
+        return f"欧美日期码：{evidence.get('site', '')} · {evidence.get('scene_code', '')} · {identity}"
     return key.replace("FC2-PPV-", "PPV-") if key.startswith("FC2-PPV-") else key
 
 
