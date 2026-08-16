@@ -544,7 +544,13 @@ def refine_match_group_meta(
     items: list[sqlite3.Row],
     row_match_meta: dict[str, dict[str, Any]],
 ) -> None:
-    """Downgrade date-code groups when title/performer identity is ambiguous."""
+    """Downgrade date-code groups when title/performer identity is ambiguous.
+
+    Western libraries often contain the same release under translated titles.
+    An explicit path variant such as ``-C`` or ``-4K`` is stronger evidence
+    than the display-language difference, while a group without either signal
+    still requires an exact title match before auto-selection.
+    """
     if meta.get("matcher") != "western_release_date":
         return
     evidences = [
@@ -553,13 +559,28 @@ def refine_match_group_meta(
     ]
     titles = {str(e.get("title_signature") or "") for e in evidences}
     performers = {str(e.get("performer_signature") or "") for e in evidences}
+    variant_signatures: set[str] = set()
+    explicit_variant = False
+    for item in items:
+        keys = item.keys()
+        name = item["name"] if "name" in keys else ""
+        path = item["path"] if "path" in keys else ""
+        name_path = f"{name} {path}".lower()
+        has_4k = bool(TAG_4K_RE.search(name_path))
+        has_c = bool(TAG_C_RE.search(name_path)) or "[c]" in name_path or "中文字幕" in name_path
+        signature = "+".join(part for part, present in (("4k", has_4k), ("c", has_c)) if present)
+        variant_signatures.add(signature or "plain")
+        explicit_variant = explicit_variant or has_4k or has_c
     evidence = dict(meta.get("evidence") or {})
     evidence["title_signatures"] = sorted(titles)
     evidence["performer_signatures"] = sorted(performers)
+    evidence["variant_signatures"] = sorted(variant_signatures)
     meta["evidence"] = evidence
+    same_title = len(titles) == 1 and "" not in titles
+    same_performer = len(performers) == 1 and "" not in performers
     meta["confidence"] = (
         "high"
-        if len(titles) == 1 and len(performers) == 1 and "" not in titles and "" not in performers
+        if same_performer and (same_title or explicit_variant)
         else "medium"
     )
 
@@ -723,6 +744,7 @@ def pick_quality(items: list[dict[str, Any]]) -> str:
         items,
         key=lambda i: (
             i.get("version_rank") or 0,
+            1 if i.get("has_poster") else 0,
             i.get("resolution") or 0,
             i.get("bitrate") or 0,
             i.get("duration") or 0,

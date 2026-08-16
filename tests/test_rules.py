@@ -206,6 +206,46 @@ class DuplicateRuleTests(unittest.TestCase):
         self.assertEqual(items[0]["recommend_action"], "keep")
         self.assertEqual(items[1]["recommend_action"], "delete")
 
+    def test_translated_titles_share_western_version_priority_group(self):
+        rows = [
+            row(
+                emby_id="c-poster",
+                name="Blacked.17.11.21 I've Waited All Week for This",
+                path="/media/Lana Rhoades/Blacked.17.11.21-C Lana Rhoades/Blacked.17.11.21-C.strm",
+                has_poster=1,
+            ),
+            row(
+                emby_id="plain-poster",
+                name="Blacked.17.11.21 I've Waited All Week for This",
+                path="/media/Lana Rhoades/Blacked.17.11.21 Lana Rhoades/Blacked.17.11.21.strm",
+                has_poster=1,
+            ),
+            row(
+                emby_id="c-no-poster",
+                name="Blacked.17.11.21 我等了整整一个星期",
+                path="/media/Lana Rhoades/Blacked.17.11.21-C Lana Rhoades/Blacked.17.11.21-C.strm",
+                has_poster=0,
+            ),
+        ]
+        matches = {item["emby_id"]: match_row(item, "av") for item in rows}
+        items = [
+            decorate_item(dict(item), "av", matches[item["emby_id"]])
+            for item in rows
+        ]
+        meta = {
+            "profile": "modern",
+            "matcher": "western_release_date",
+            "confidence": "medium",
+            "source_type": "strm",
+            "evidence": {},
+        }
+        refine_match_group_meta(meta, rows, matches)
+        apply_recommendations(items, "av", {}, meta)
+        self.assertEqual(meta["confidence"], "high")
+        self.assertEqual(items[0]["recommend_action"], "keep")
+        self.assertEqual(items[1]["recommend_action"], "delete")
+        self.assertEqual(items[2]["recommend_action"], "delete")
+
     def test_release_date_code_separates_same_title_different_performers(self):
         first = match_row(
             row(

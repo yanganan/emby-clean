@@ -29,6 +29,7 @@ if (new Set(flat).size !== items.length) throw new Error('page overlap');
         self.assertIn("应用不会删除 STRM 或远程源文件", html)
         self.assertIn("EmbyCleanPagination", html)
         self.assertIn("i.tag_4k?'4K'", html)
+        self.assertIn("i.tag_c?'字幕'", html)
 
 
 if __name__ == "__main__":
