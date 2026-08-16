@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
+import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -31,11 +33,29 @@ from .store import (
     export_config,
     import_config,
     is_data_volume_mounted,
+    create_job,
+    decode,
+    record_audit,
+    update_job,
 )
+from .security import api_key_is_valid, delete_request_decision
 
 
-app = FastAPI(title="Emby Clean", version="2.0.0")
+app = FastAPI(title="Emby Clean", version="2.1.0")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+API_KEY = os.getenv("EMBY_CLEAN_API_KEY", "").strip()
+
+
+@app.middleware("http")
+async def api_key_middleware(request, call_next):
+    """Optional deployment-level API key for every mutating/private endpoint."""
+    if API_KEY and (
+        request.url.path.startswith("/api/") or request.url.path.startswith("/emby-image")
+    ) and request.url.path not in {"/api/health"}:
+        provided = request.headers.get("X-API-Key", "")
+        if not api_key_is_valid(provided, API_KEY):
+            return JSONResponse(status_code=401, content={"detail": "需要有效的 X-API-Key"})
+    return await call_next(request)
 
 LOGS: list[str] = []
 SYNC_LOCK = asyncio.Lock()
@@ -54,16 +74,19 @@ scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 # ---------------------------------------------------------------------------
 
 class ConfigRequest(BaseModel):
-    host: str | None = ""
-    user: str | None = ""
-    pwd: str | None = ""
-    webhook: str | None = ""
-    cron_sync: str | None = ""
-    prefs: dict[str, Any] | None = None
+    host: Optional[str] = ""
+    user: Optional[str] = ""
+    pwd: Optional[str] = ""
+    webhook: Optional[str] = ""
+    cron_sync: Optional[str] = ""
+    prefs: Optional[dict[str, Any]] = None
 
 
 class DeleteRequest(BaseModel):
     ids: list[str]
+    confirm: bool = False
+    dry_run: bool = True
+    object_type: str = "emby_item"
 
 
 class RefreshRequest(BaseModel):
@@ -107,14 +130,16 @@ async def startup() -> None:
 
     with connect() as db:
         db.execute("update delete_queue set status='pending', error=NULL where status='running'")
+        db.execute("update jobs set status='queued', error=NULL where status='running'")
         cron_sync = get_config(db).get("cron_sync", "")
     if not scheduler.running:
         scheduler.start()
     configure_sync_schedule(cron_sync)
     reload_task_schedules()
-    log("SYSTEM", "服务就绪 (v2.0)...")
+    log("SYSTEM", "服务就绪 (v2.1.0)...")
     # Proactively re-authenticate on startup if credentials are available
     asyncio.create_task(startup_reauth())
+    asyncio.create_task(resume_queued_jobs())
 
 
 async def startup_reauth() -> None:
@@ -332,9 +357,14 @@ async def scheduled_task_run(task_id: int) -> None:
                     if item.get("recommend_action") == "delete":
                         delete_ids.append(item["emby_id"])
             if delete_ids:
-                queued = queue_deletes(delete_ids)
+                allow_auto_delete = bool(prefs.get("allow_auto_delete", False))
+                queued = queue_deletes(
+                    delete_ids,
+                    confirm=allow_auto_delete,
+                    dry_run=not allow_auto_delete,
+                )
                 deleted_count = queued
-                log("TASK", f"[{task_name}] 自动入队删除 {queued} 条")
+                log("TASK", f"[{task_name}] 自动删除处理：入队 {queued} 条，授权={'开' if allow_auto_delete else '关'}")
 
         duration = int((time.time() - started) * 1000)
         message = f"命中 {found} 条" + (f"，已入队删除 {deleted_count} 条" if auto_delete else "")
@@ -360,34 +390,69 @@ async def scheduled_task_run(task_id: int) -> None:
         await notify(f"定时任务失败：{task_name}", str(exc))
 
 
-def queue_deletes(ids: list[str]) -> int:
-    """Queue items for deletion. Returns count of newly queued."""
+def plan_deletes(ids: list[str]) -> list[dict[str, Any]]:
+    """Return a non-mutating delete plan with source/object boundaries."""
     ids = list(dict.fromkeys(ids))
     if not ids:
-        return 0
+        return []
     placeholders = ",".join("?" for _ in ids)
-    queued = 0
     with connect() as db:
         rows = db.execute(
-            f"select emby_id,name,size,path from media_items where emby_id in ({placeholders})",
+            f"select emby_id,name,size,path,source_type,source_status from media_items where emby_id in ({placeholders})",
             ids,
         ).fetchall()
+    return [
+        {
+            "emby_id": row["emby_id"],
+            "name": row["name"],
+            "path": row["path"],
+            "size": row["size"] or 0,
+            "object_type": "emby_item",
+            "source_type": row["source_type"] or ("strm" if str(row["path"] or "").lower().endswith(".strm") else "local_file"),
+            "source_status": row["source_status"] or "unknown",
+        }
+        for row in rows
+    ]
+
+
+def queue_deletes(
+    ids: list[str],
+    *,
+    confirm: bool = False,
+    dry_run: bool = True,
+    object_type: str = "emby_item",
+) -> int:
+    """Queue only explicitly confirmed, non-remote Emby item deletions."""
+    plan = plan_deletes(ids)
+    if not plan:
+        return 0
+    if dry_run or not confirm:
+        return 0
+    queued = 0
+    with connect() as db:
         queued_existing = {
             row["emby_id"]
             for row in db.execute(
-                f"select emby_id from delete_queue where status in ('pending','running') and emby_id in ({placeholders})",
+                f"select emby_id from delete_queue where status in ('pending','running') and emby_id in ({','.join('?' for _ in ids)})",
                 ids,
             ).fetchall()
         }
-        for row in rows:
-            if row["emby_id"] in queued_existing:
+        for item in plan:
+            decision = delete_request_decision(
+                confirm=confirm,
+                dry_run=dry_run,
+                source_type=item["source_type"],
+                object_type=object_type,
+            )
+            if decision["status"] != "approved" or item["emby_id"] in queued_existing:
                 continue
+            audit_id = record_audit(db, "delete_queued", object_type, item["emby_id"], {"path": item["path"], "source_type": item["source_type"]})
             db.execute(
                 """
-                insert into delete_queue(emby_id,name,path,size,status,created_at)
-                values(?,?,?,?,?,?)
+                insert into delete_queue(emby_id,name,path,size,status,created_at,object_type,dry_run,confirmed,audit_id)
+                values(?,?,?,?,?,?,?,?,?,?)
                 """,
-                (row["emby_id"], row["name"], row["path"], row["size"] or 0, "pending", now_ts()),
+                (item["emby_id"], item["name"], item["path"], item["size"], "pending", now_ts(), object_type, 0, 1, audit_id),
             )
             queued += 1
     if queued:
@@ -406,7 +471,22 @@ async def index() -> str:
 
 @app.get("/api/health")
 async def health_api() -> dict[str, Any]:
-    return {"ok": True, "version": "2.0.0"}
+    return {"ok": True, "version": "2.1.0", "api_key_protected": bool(API_KEY)}
+
+
+@app.get("/api/audit")
+async def audit_get(limit: int = Query(200, ge=1, le=1000), offset: int = Query(0, ge=0)) -> list[dict[str, Any]]:
+    with connect() as db:
+        rows = db.execute(
+            "select id,action,target_type,target_id,payload,created_at from audit_log order by id desc limit ? offset ?",
+            (limit, offset),
+        ).fetchall()
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["payload"] = decode(item.get("payload"), {})
+        result.append(item)
+    return result
 
 
 @app.get("/api/status")
@@ -516,6 +596,8 @@ async def cfg_post(req: ConfigRequest) -> dict[str, Any]:
             set_config_value(db, "prefs", req.prefs)
     configure_sync_schedule(req.cron_sync or "")
     backup_config()  # auto-backup to JSON file
+    with connect() as db:
+        record_audit(db, "config_save", "config", "", {"host": host, "user": user, "has_password": bool(pwd)})
     log("CONFIG", "配置已保存")
     return {"status": "ok"}
 
@@ -541,6 +623,8 @@ async def cfg_import(payload: dict[str, Any]) -> dict[str, Any]:
         cron_sync = get_config(db).get("cron_sync", "")
     configure_sync_schedule(cron_sync)
     reload_task_schedules()
+    with connect() as db:
+        record_audit(db, "config_import", "config", "", {"version": payload.get("version", 1)})
     log("CONFIG", "配置已从导入文件恢复")
     return {"status": "ok"}
 
@@ -577,8 +661,117 @@ async def libs_g() -> list[dict[str, Any]]:
 async def sync_p() -> dict[str, Any]:
     if SYNC_LOCK.locked():
         return {"status": "busy"}
-    asyncio.create_task(sync_metadata())
-    return {"status": "ok"}
+    job_id = f"sync-{uuid.uuid4().hex}"
+    with connect() as db:
+        create_job(db, job_id, "sync", {})
+    asyncio.create_task(run_sync_job(job_id))
+    return {"status": "queued", "job_id": job_id}
+
+
+async def run_sync_job(job_id: str) -> None:
+    with connect() as db:
+        update_job(db, job_id, status="running", started_at=now_ts())
+    try:
+        await sync_metadata()
+        with connect() as db:
+            update_job(db, job_id, status="done", progress=1, total=1, finished_at=now_ts())
+    except Exception as exc:
+        with connect() as db:
+            update_job(db, job_id, status="failed", error=str(exc), finished_at=now_ts())
+        raise
+
+
+@app.post("/api/scan/jobs")
+async def scan_job_post(
+    mode: str,
+    lib: str = "",
+    param_s: str = "100",
+    param_d: str = "0",
+    duration_scope: str = "dir",
+    duration_precision: str = "second",
+) -> dict[str, Any]:
+    libs = [x for x in lib.split(",") if x]
+    params = {
+        "mode": mode,
+        "libs": libs,
+        "param_s": param_s,
+        "param_d": param_d,
+        "duration_scope": duration_scope,
+        "duration_precision": duration_precision,
+    }
+    job_id = f"scan-{uuid.uuid4().hex}"
+    with connect() as db:
+        create_job(db, job_id, "scan", params)
+    asyncio.create_task(run_scan_job(job_id, params))
+    return {"status": "queued", "job_id": job_id}
+
+
+async def run_scan_job(job_id: str, params: dict[str, Any]) -> None:
+    with connect() as db:
+        update_job(db, job_id, status="running", started_at=now_ts(), progress=0, total=1)
+    try:
+        with connect() as db:
+            prefs = get_config(db).get("prefs", {})
+            data = run_scan(
+                db,
+                str(params.get("mode", "smart")),
+                list(params.get("libs", [])),
+                {
+                    "param_s": str(params.get("param_s", "100")),
+                    "param_d": str(params.get("param_d", "0")),
+                    "duration_scope": str(params.get("duration_scope", "dir")),
+                    "duration_precision": str(params.get("duration_precision", "second")),
+                },
+                prefs,
+            )
+            encoded = json.dumps(data, ensure_ascii=False)
+            update_job(
+                db,
+                job_id,
+                status="done",
+                progress=1,
+                total=1,
+                result_count=sum(len(group.get("items", [])) for group in data),
+                result_json=encoded,
+                finished_at=now_ts(),
+            )
+        log("JOB", f"扫描任务完成：{job_id}")
+    except Exception as exc:
+        with connect() as db:
+            update_job(db, job_id, status="failed", error=str(exc), finished_at=now_ts())
+        log("ERROR", f"扫描任务失败：{job_id}：{exc}")
+
+
+async def resume_queued_jobs() -> None:
+    """Resume queued jobs after a process restart, preserving durable state."""
+    await asyncio.sleep(0)
+    with connect() as db:
+        rows = db.execute("select id,job_type,params from jobs where status='queued' order by created_at").fetchall()
+    for row in rows:
+        params = decode(row["params"], {}) or {}
+        if row["job_type"] == "scan":
+            asyncio.create_task(run_scan_job(row["id"], params))
+        elif row["job_type"] == "sync":
+            asyncio.create_task(run_sync_job(row["id"]))
+
+
+@app.get("/api/jobs")
+async def jobs_get(limit: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
+    with connect() as db:
+        rows = db.execute("select * from jobs order by created_at desc limit ?", (limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+@app.get("/api/jobs/{job_id}")
+async def job_get(job_id: str) -> dict[str, Any]:
+    with connect() as db:
+        row = db.execute("select * from jobs where id=?", (job_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "任务不存在")
+    result = dict(row)
+    result["params"] = decode(result.get("params"), {})
+    result["result"] = decode(result.pop("result_json", "[]"), [])
+    return result
 
 
 def db_count_library(library_id: str) -> int:
@@ -754,7 +947,39 @@ async def scan_api(
 
 @app.post("/api/delete")
 async def dele_post(req: DeleteRequest) -> dict[str, Any]:
-    queued = queue_deletes(req.ids)
+    plan = plan_deletes(req.ids)
+    if req.dry_run or not req.confirm:
+        with connect() as db:
+            audit_id = record_audit(
+                db,
+                "delete_plan",
+                req.object_type,
+                "",
+                {"ids": req.ids, "plan_count": len(plan), "dry_run": True},
+            )
+        log("DELETE", f"生成删除计划：{len(plan)} 条，未执行，audit={audit_id}")
+        return {
+            "status": "dry_run",
+            "planned": len(plan),
+            "items": plan,
+            "requires_confirm": True,
+            "audit_id": audit_id,
+            "message": "已生成计划；请显式 confirm=true 且 dry_run=false 后再执行",
+        }
+    rejected = [
+        item for item in plan
+        if delete_request_decision(
+            confirm=req.confirm,
+            dry_run=req.dry_run,
+            source_type=item["source_type"],
+            object_type=req.object_type,
+        )["status"] != "approved"
+    ]
+    if rejected:
+        with connect() as db:
+            audit_id = record_audit(db, "delete_rejected", req.object_type, "", {"items": rejected})
+        return {"status": "rejected", "rejected": rejected, "audit_id": audit_id, "message": "存在不允许删除的远程/STRM源"}
+    queued = queue_deletes(req.ids, confirm=req.confirm, dry_run=req.dry_run, object_type=req.object_type)
     skipped = len(req.ids) - queued
     log("DELETE", f"加入删除队列：新增 {queued} 条，跳过 {skipped} 条")
     return {"status": "queued", "queued": queued, "skipped": skipped, "message": f"已加入删除队列 {queued} 条"}
@@ -790,7 +1015,7 @@ async def delete_worker() -> None:
                     (max_retries,),
                 )
                 row = db.execute(
-                    "select * from delete_queue where status='pending' order by id asc limit 1"
+                    "select * from delete_queue where status='pending' and confirmed=1 and dry_run=0 order by id asc limit 1"
                 ).fetchone()
                 if not row:
                     db.execute("delete from delete_queue where status='done'")
@@ -826,6 +1051,7 @@ async def delete_worker() -> None:
                         "update delete_queue set status='done', finished_at=? where id=?",
                         (now_ts(), row["id"]),
                     )
+                    record_audit(db, "delete_done", row["object_type"] or "emby_item", row["emby_id"], {"queue_id": row["id"], "size": row["size"] or 0})
                     set_stat(db, "cleaned_count", int(get_stat(db, "cleaned_count", 0)) + 1)
                     set_stat(db, "saved_space", int(get_stat(db, "saved_space", 0)) + int(row["size"] or 0))
                 log("DELETE", f"[队列#{row['id']}] 删除完成")
@@ -840,6 +1066,7 @@ async def delete_worker() -> None:
                         """,
                         (str(exc), now_ts(), row["id"]),
                     )
+                    record_audit(db, "delete_failed", row["object_type"] or "emby_item", row["emby_id"], {"queue_id": row["id"], "error": str(exc)})
                 log("ERROR", f"[队列#{row['id']}] 删除 {row['emby_id']} 失败 (重试 {row['retry_count'] + 1}/{max_retries})：{exc}")
             await asyncio.sleep(DELETE_CONFIRM_INTERVAL)
 
@@ -882,8 +1109,9 @@ async def delete_retry() -> dict[str, Any]:
     """Reset all failed queue items to pending for re-processing."""
     with connect() as db:
         count = db.execute(
-            "update delete_queue set status='pending', error=NULL where status='failed'"
+            "update delete_queue set status='pending', error=NULL where status='failed' and confirmed=1 and dry_run=0"
         ).rowcount
+        record_audit(db, "delete_retry", "delete_queue", "", {"count": count})
     if count:
         ensure_delete_worker()
     log("DELETE", f"手动重试 {count} 条失败记录")
@@ -897,6 +1125,7 @@ async def delete_clear() -> dict[str, Any]:
         count = db.execute(
             "delete from delete_queue where status in ('done','failed')"
         ).rowcount
+        record_audit(db, "delete_queue_clear", "delete_queue", "", {"count": count})
     return {"status": "ok", "cleared": count}
 
 
@@ -975,6 +1204,8 @@ async def refresh_p(req: RefreshRequest) -> dict[str, Any]:
         except Exception as exc:
             log("ERROR", f"刷新 {item_id} 失败：{exc}")
     log("REFRESH", f"刷新指令已发送 {ok} 条")
+    with connect() as db:
+        record_audit(db, "refresh_items", "emby_item", "", {"requested": req.ids, "succeeded": ok})
     return {"status": "ok", "count": ok}
 
 
@@ -985,6 +1216,8 @@ async def refresh_library_api() -> dict[str, Any]:
     try:
         await client.refresh_library()
         log("REFRESH", "全库刷新指令已发送")
+        with connect() as db:
+            record_audit(db, "refresh_library", "emby_library", "", {})
         return {"status": "ok"}
     except EmbyError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -1018,6 +1251,7 @@ async def ignore_post(req: IgnoreRequest) -> dict[str, Any]:
                 "insert into ignore_items(group_key,mode,scope,created_at) values(?,?,?,?)",
                 (key, req.mode, "group", now_ts()),
             )
+        record_audit(db, "ignore_add", "ignore_items", "", {"mode": req.mode, "ids": req.ids, "group_keys": req.group_keys})
     log("IGNORE", f"{req.mode} 忽略 {len(req.ids) + len(req.group_keys)} 条")
     return {"status": "ok"}
 
@@ -1026,6 +1260,7 @@ async def ignore_post(req: IgnoreRequest) -> dict[str, Any]:
 async def ignore_del(row_id: int) -> dict[str, Any]:
     with connect() as db:
         db.execute("delete from ignore_items where id = ?", (row_id,))
+        record_audit(db, "ignore_remove", "ignore_items", str(row_id), {})
     return {"status": "ok"}
 
 

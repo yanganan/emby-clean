@@ -108,3 +108,25 @@ git push origin v0.1.0
 ```
 
 The tag will trigger a versioned Docker image build.
+
+## Runtime safety and FNOS boundary
+
+Optional API protection:
+
+```yaml
+environment:
+  - EMBY_CLEAN_API_KEY=replace-with-a-long-random-value
+```
+
+When enabled, the browser UI can store the key locally in the settings page and
+send it as `X-API-Key`. Do not expose the service directly to the public
+internet.
+
+The service only uses the Emby API and read-only media/source inspection. It
+does not write MDC/NFO/image metadata and does not delete STRM or remote source
+files. Deletion is an explicit Emby-item action; the default is a dry-run plan.
+
+New inspection modes include `image`, `media_health`, `strm_health`,
+`source_dupe`, and `content_dupe`. A FUSE/115 path that is temporarily
+unavailable is reported as unavailable and must not be treated as a missing or
+deletable resource.

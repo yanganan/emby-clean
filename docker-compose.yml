@@ -6,6 +6,8 @@ services:
       - "19898:19898"
     environment:
       - EMBY_CLEAN_DATA=/data
+      # 可选：设置后所有 /api 与图片代理请求均需 X-API-Key。
+      # - EMBY_CLEAN_API_KEY=change-me
     volumes:
       - ./data:/data
     restart: unless-stopped
