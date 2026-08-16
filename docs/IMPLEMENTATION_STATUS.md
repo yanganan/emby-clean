@@ -97,7 +97,7 @@ FastAPI TestClient: health/job/audit/export/API-Key       # passed
 ### 验证与未决
 
 - 前端 JavaScript：`node --check` 通过。
-- Docker 构建：未完成；本机 Docker daemon 未运行，阻断原因为 `docker.sock` 不可用。
+- Docker 构建：已通过 `docker build -t emby-clean:review .`，本地镜像已生成；此前 Docker daemon 未运行的阻断已解除。
 - FNOS 生产观察：本轮未部署镜像、未触发同步、未执行删除；需用户确认发布窗口后单独进行。
 
 ### 前端视觉刷新补充 ✅
