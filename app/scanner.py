@@ -32,6 +32,7 @@ VARIANT_WORDS = re.compile(
 )
 TAG_C_RE = re.compile(r"(?i)(?:^|[\s._-])c(?=$|[\s._-])")
 TAG_UC_RE = re.compile(r"(?i)(?:^|[\s._-])uc(?=$|[\s._-])")
+TAG_4K_RE = re.compile(r"(?i)(?:^|[\s._-])4k(?=$|[\s._-])")
 
 
 def item_from_emby(
@@ -585,9 +586,10 @@ def decorate_item(item: dict[str, Any], mode: str, match: dict[str, Any] | None 
     item["tag_uc"] = bool(TAG_UC_RE.search(name_path)) or "[uc]" in name_path or "uncensored" in name_path or any(str(t).lower() in {"uc", "uncensored"} for t in tags)
     item["tag_u"] = "[u]" in name_path or any(str(t).lower() == "u" for t in tags)
     item["tag_crack"] = any(x in name_path for x in ["破解", "crack", "破解版"])
+    item["tag_4k"] = bool(TAG_4K_RE.search(name_path))
     item["tag_leak"] = any(x in name_path for x in ["流出", "泄露", "leak"])
-    item["version_rank"] = version_rank(item)
     item["has_poster"] = bool(item.get("has_poster"))
+    item["version_rank"] = version_rank(item)
     item["size"] = int(item.get("size") or 0)
     item["resolution"] = int(item.get("resolution") or 0)
     item["duration"] = float(item.get("duration_seconds") or 0)
@@ -622,7 +624,16 @@ def apply_recommendations(
             (item.get("resolution") or 0) or (item.get("size") or 0) or (item.get("duration") or 0)
             for item in items
         )
-        if not has_quality and group_meta.get("source_type") == "strm" and confidence != "exact":
+        has_path_priority = any(
+            item.get("tag_4k") or item.get("tag_c") or item.get("has_poster")
+            for item in items
+        )
+        if (
+            not has_quality
+            and group_meta.get("source_type") == "strm"
+            and confidence != "exact"
+            and not has_path_priority
+        ):
             for item in items:
                 item["recommend_action"] = "review"
                 item["recommend_reason"] = "STRM 缺少大小/时长/分辨率，无法安全选优"
@@ -661,13 +672,13 @@ def apply_recommendations(
 
 
 def version_rank(item: dict[str, Any]) -> int:
-    if item.get("tag_crack") and item.get("tag_c"):
+    if (item.get("tag_crack") or item.get("tag_4k")) and item.get("tag_c"):
         return 4
     if item.get("tag_c"):
         return 3
-    if item.get("tag_crack"):
+    if item.get("tag_crack") or item.get("tag_4k"):
         return 2
-    return 1
+    return 1 if item.get("has_poster") else 0
 
 
 def pick_best_version(items: list[dict[str, Any]]) -> str:
@@ -711,6 +722,7 @@ def pick_quality(items: list[dict[str, Any]]) -> str:
     return max(
         items,
         key=lambda i: (
+            i.get("version_rank") or 0,
             i.get("resolution") or 0,
             i.get("bitrate") or 0,
             i.get("duration") or 0,

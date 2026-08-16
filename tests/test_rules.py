@@ -2,10 +2,12 @@ import unittest
 
 from app.scanner import (
     apply_recommendations,
+    decorate_item,
     legacy_library_rules,
     match_row,
     normalize_variant_key,
     refine_match_group_meta,
+    version_rank,
 )
 
 
@@ -112,6 +114,97 @@ class DuplicateRuleTests(unittest.TestCase):
         )
         self.assertEqual(first["key"], second["key"])
         self.assertEqual(first["confidence"], "medium")
+
+    def test_release_date_code_ignores_4k_suffix_when_matching_variants(self):
+        four_k = row(
+            name="BeautyAngels.19.01.31-4K.strm",
+            path="/media/欧美合集/Tiny Teen/BeautyAngels.19.01.31-4K Tiny Teen/BeautyAngels.19.01.31-4K.strm",
+        )
+        default = row(
+            name="BeautyAngels.19.01.31.strm",
+            path="/media/欧美合集/Tiny Teen/BeautyAngels.19.01.31 Tiny Teen/BeautyAngels.19.01.31.strm",
+        )
+        first = match_row(four_k, "av")
+        second = match_row(default, "av")
+        self.assertEqual(first["matcher"], "western_release_date")
+        self.assertEqual(first["key"], second["key"])
+        self.assertEqual(first["evidence"]["scene_code"], "19.01.31")
+
+    def test_western_filename_priority_prefers_4k_then_subtitle_then_poster(self):
+        rows = [
+            row(
+                emby_id="4k-subtitle",
+                name="BeautyAngels.19.01.31-4K-C.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31-4K-C Tiny Teen/BeautyAngels.19.01.31-4K-C.strm",
+                has_poster=0,
+            ),
+            row(
+                emby_id="4k",
+                name="BeautyAngels.19.01.31-4K.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31-4K Tiny Teen/BeautyAngels.19.01.31-4K.strm",
+                has_poster=0,
+            ),
+            row(
+                emby_id="subtitle",
+                name="BeautyAngels.19.01.31-C.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31-C Tiny Teen/BeautyAngels.19.01.31-C.strm",
+                has_poster=0,
+            ),
+            row(
+                emby_id="plain-poster",
+                name="BeautyAngels.19.01.31.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31 Tiny Teen/BeautyAngels.19.01.31.strm",
+                has_poster=1,
+            ),
+            row(
+                emby_id="plain",
+                name="BeautyAngels.19.01.31.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31 Tiny Teen/BeautyAngels.19.01.31-plain.strm",
+                has_poster=0,
+            ),
+        ]
+        items = [
+            decorate_item(dict(item), "av", match_row(item, "av"))
+            for item in rows
+        ]
+        self.assertGreater(version_rank(items[0]), version_rank(items[1]))
+        self.assertGreater(version_rank(items[0]), version_rank(items[2]))
+        self.assertGreater(version_rank(items[1]), version_rank(items[3]))
+        self.assertGreater(version_rank(items[2]), version_rank(items[4]))
+        self.assertGreater(version_rank(items[3]), version_rank(items[4]))
+
+    def test_western_strm_filename_priority_can_select_4k_without_media_metadata(self):
+        rows = [
+            row(
+                emby_id="4k",
+                name="BeautyAngels.19.01.31-4K.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31-4K Tiny Teen/BeautyAngels.19.01.31-4K.strm",
+                has_poster=0,
+            ),
+            row(
+                emby_id="plain",
+                name="BeautyAngels.19.01.31.strm",
+                path="/media/Tiny Teen/BeautyAngels.19.01.31 Tiny Teen/BeautyAngels.19.01.31.strm",
+                has_poster=0,
+            ),
+        ]
+        items = [
+            decorate_item(dict(item), "av", match_row(item, "av"))
+            for item in rows
+        ]
+        apply_recommendations(
+            items,
+            "av",
+            {},
+            {
+                "profile": "modern",
+                "matcher": "western_release_date",
+                "confidence": "high",
+                "source_type": "strm",
+            },
+        )
+        self.assertEqual(items[0]["recommend_action"], "keep")
+        self.assertEqual(items[1]["recommend_action"], "delete")
 
     def test_release_date_code_separates_same_title_different_performers(self):
         first = match_row(

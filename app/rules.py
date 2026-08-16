@@ -23,6 +23,9 @@ VARIANT_WORDS = re.compile(
 )
 SCENE_CODE = re.compile(r"(?<!\d)(\d{2,4}(?:[._-]\d{1,4}){2,3})(?!\d)")
 RELEASE_DATE_CODE = re.compile(r"^(?:\d{2}|\d{4})\.(?:0[1-9]|1[0-2])\.(?:0[1-9]|[12]\d|3[01])$")
+RELEASE_DATE_SCENE_CODE = re.compile(
+    r"(?<!\d)((?:\d{2}|\d{4})[._-](?:0[1-9]|1[0-2])[._-](?:0[1-9]|[12]\d|3[01]))(?!\d)"
+)
 LEADING_NUMBER = re.compile(r"^\s*(\d{1,5})(?=[\s._-]|$)")
 GENERIC_CONTEXT = {
     "media", "video", "videos", "movie", "movies", "tv", "series", "shows",
@@ -174,6 +177,16 @@ def western_match(row: Any, mode: str = "smart") -> dict[str, Any]:
             "evidence": {"source_target": target},
             "source_type": source,
         }
+
+    release_scene_match = RELEASE_DATE_SCENE_CODE.search(stem)
+    if release_scene_match:
+        prefix = stem[: release_scene_match.start()].rstrip(" ._-")
+        site_match = re.search(r"([A-Za-z][A-Za-z0-9]*|[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*)$", prefix)
+        site = normalize_site(site_match.group(1) if site_match else path_context(path))
+        if site:
+            raw_code = release_scene_match.group(1)
+            code = re.sub(r"[-_]", ".", raw_code)
+            return _release_date_match(row, stem, site, raw_code, code)
 
     scene_match = SCENE_CODE.search(stem)
     if scene_match:
