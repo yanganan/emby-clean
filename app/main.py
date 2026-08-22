@@ -465,8 +465,15 @@ def queue_deletes(
 # ---------------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
-async def index() -> str:
-    return (Path(__file__).parent / "static" / "index.html").read_text("utf-8")
+async def index() -> HTMLResponse:
+    return HTMLResponse(
+        (Path(__file__).parent / "static" / "index.html").read_text("utf-8"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/api/health")
