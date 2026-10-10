@@ -35,11 +35,11 @@ git diff --check                           # passed
 
 ### FNOS 真实数据校准补充 ⏳
 
-- 只读确认 FNOS `emby-clean` 容器健康运行，SQLite 位于 `/vol1/1000/docker_data/emby-clean/data/emby_clean.db`，约 188MB。
-- 欧美资料库缓存包含 7,969 个媒体条目；现有最近一次 `av` 扫描产生 711 组/1,501 条，其中 1,459 条 review、23 条 delete、19 条 keep。
+- 只读确认 FNOS `emby-clean` 容器健康运行，SQLite 位于 `/path/to/docker_data/emby-clean/data/emby_clean.db`，约数百 MB。
+- 欧美资料库缓存包含约数千个媒体条目；现有最近一次 `av` 扫描产生数百组候选/上千条记录，其中绝大多数 review、少量 delete、少量 keep。
 - 已确认根因：欧美大量 `YY.MM.DD` 三段数字是发布日期，不是唯一作品编号；当前 `站点 + 日期码` 会把不同标题、不同演员合并，例如 `WowGirls.19.01.01` 和 `Vixen.17.12.15`。
 - 新规则将日期码候选按“站点 + 日期 + 演员目录身份”分组，并把标题签名作为置信度门禁：标题与演员都一致才提升 high；翻译标题或身份不一致保持 medium/review。
-- 使用同一份 FNOS 数据做本地只读模拟：候选降为 612 组/1,267 条，1,237 条 review、15 条 delete、15 条 keep；79 组歧义候选被保留为人工复核。
+- 使用同一份 FNOS 数据做本地只读模拟：候选降为数百组/上千条，绝大多数 review、少量 delete、少量 keep；数十组歧义候选被保留为人工复核。
 - 日本系列与 FC2 规则未改动；FNOS 已部署本次新规则，但尚未执行新规则扫描、写入或删除。
 
 ### 欧美版本优先级与结果页修复 ✅
@@ -52,9 +52,9 @@ git diff --check                           # passed
 
 ### FNOS 部署验证 ✅
 
-- 使用 `/vol1/1000/docker_data/docker-compose.yml` 原配置拉取并重建 `emby-clean`，保留原有 `/data` 挂载、端口和 Compose 管理方式。
+- 使用 `/path/to/docker_data/docker-compose.yml` 原配置拉取并重建 `emby-clean`，保留原有 `/data` 挂载、端口和 Compose 管理方式。
 - 容器镜像 revision：`a01c55418422148ab3c41218582e7936425693f5`；容器状态 `running/healthy`。
-- `/api/health` 返回 `ok=true`、`version=2.1.0`；SQLite `quick_check=ok`，`media_items=65356`，确认现有数据未丢失。
+- `/api/health` 返回 `ok=true`、`version=2.1.0`；SQLite `quick_check=ok`，`media_items` 与部署前一致，确认现有数据未丢失。
 - 未自动触发扫描和删除，下一步由用户在前端执行一次欧美只读查重验证。
 
 ## 阶段二：媒体、图片与 STRM 完整性检查 ✅
